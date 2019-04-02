@@ -26,5 +26,10 @@ deck = Deck.Deck()
 for kard in deck.deck:
     print(kard.get_card_name())
 
+# Shuffle cards
+# Deal
+# Bot logic
+print("Test")
+
 
 
