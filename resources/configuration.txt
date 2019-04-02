@@ -1,2 +1,4 @@
-conf1=12
-conf2=lala
+min_cut_shuffle=2
+max_cut_shuffle=52
+min_number_of_shuffles=100
+max_number_of_shuffles=150
