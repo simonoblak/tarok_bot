@@ -1,4 +1,12 @@
+#[tarot.settings]
+tarot_path=resources/tarot_cards.txt
+
+#[shuffle.settings]
 min_cut_shuffle=2
 max_cut_shuffle=52
 min_number_of_shuffles=100
 max_number_of_shuffles=150
+
+#[table.settings]
+player_number=4
+player_names=Simon,Lucka,Blaz,Petra

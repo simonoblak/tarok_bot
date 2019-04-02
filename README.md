@@ -1,2 +1,3 @@
 # tarok_bot
-Diplomska naloga
+<p>Run 'TarokBot.py'</p>
+<p>Version 0.02</p>

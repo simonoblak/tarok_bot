@@ -1,40 +1,45 @@
 from karte import Deck
+import Configuration
+from players import Table
 
 print("Start...")
 
+# Reading configuration.txt file
+Configuration.Configuration().read_config("resources/configuration.txt")
+config = Configuration.Configuration().get_config()
 
-def read_conf(file_name):
-    print("Reading configuration")
-    lines = [line.rstrip('\n') for line in open(file_name)]
-    properties = {}
-    for line in lines:
-        setting = line.split("=")
-        if len(setting) == 2:
-            try:
-                properties[setting[0]] = int(setting[1])
-            except ValueError:
-                properties[setting[0]] = setting[1]
+# Creating a shuffled deck
+Deck.Deck().create_deck(config["tarot_path"])
+Deck.Deck().shuffle_deck(config["min_cut_shuffle"],
+                         config["max_cut_shuffle"],
+                         config["min_number_of_shuffles"],
+                         config["max_number_of_shuffles"])
+deck = Deck.Deck().get_deck()
 
-    print("Configuration obtained")
-    return properties
+# Creating players and table
+table = Table.Table()
+table.set_table()
+table.deal_cards()
 
-
-conf = read_conf("resources/configuration.txt")
-# print(conf)
-
-deck = Deck.Deck()
-
-deck.shuffle_deck(conf["min_cut_shuffle"],
-                  conf["max_cut_shuffle"],
-                  conf["min_number_of_shuffles"],
-                  conf["max_number_of_shuffles"])
-
+"""
 print("----------CARD ORDER----------")
-for kard in deck.deck:
-    print(kard.get_card_name() + "-> Points: " + kard.points + "; Rank: " + kard.rank)
+c = 0
+for kard in deck:
+    print(str(c) + ". " + kard.get_card_name())
+    c += 1
 print("------------------------------")
 
-# Shuffle cards
-# Deal
-# Bot logic
 
+print("----------Players Cards----------")
+
+for playa in table.players:
+    c = 0
+    print(playa.name)
+    for car in playa.cards:
+        print(str(c) + ". " + car.get_card_name())
+        c += 1
+for t in table.talon:
+    print(t.get_card_name())
+print("---------------------------------")
+
+"""
