@@ -1,0 +1,2 @@
+conf1=12
+conf2=lala
