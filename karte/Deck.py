@@ -9,8 +9,8 @@ class Deck:
     def create_deck(path):
         lines = [line.rstrip('\n') for line in open(path)]
         for line in lines:
-            name, points, rank, suit = line.split(";")
-            card = Card.Card(name, int(points), int(rank), suit)
+            name, points, rank, suit, deck_order = line.split(";")
+            card = Card.Card(name, int(points), int(rank), suit, deck_order)
             Deck.deck.append(card)
 
     def shuffle_deck(self, min_limit, max_limit, min_number_of_shuffles, max_number_of_shuffles):
@@ -18,7 +18,6 @@ class Deck:
         for i in range(number_of_shuffles):
             Deck.deck = self.cut_shuffle(Deck.deck, min_limit, max_limit)
             Deck.deck = self.riffle_shuffle(Deck.deck)
-
 
     def cut_shuffle(self, deck, min_limit, max_limit):
         spot = random.randint(min_limit, max_limit)

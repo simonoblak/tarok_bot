@@ -21,6 +21,8 @@ table = Table.Table()
 table.set_table()
 table.deal_cards()
 
+
+
 """
 print("----------CARD ORDER----------")
 c = 0
@@ -28,7 +30,7 @@ for kard in deck:
     print(str(c) + ". " + kard.get_card_name())
     c += 1
 print("------------------------------")
-
+"""
 
 print("----------Players Cards----------")
 
@@ -42,4 +44,16 @@ for t in table.talon:
     print(t.get_card_name())
 print("---------------------------------")
 
-"""
+
+print("----------Players Sorted Cards----------")
+
+for playa in table.players:
+    playa.sort_cards()
+    c = 0
+    print(playa.name)
+    for car in playa.cards:
+        print(str(c) + ". " + car.get_card_name())
+        c += 1
+for t in table.talon:
+    print(t.get_card_name())
+print("----------------------------------------")

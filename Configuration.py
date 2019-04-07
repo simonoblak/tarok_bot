@@ -5,7 +5,6 @@ class Configuration:
     def read_config(file_name):
         print("Reading configuration")
         lines = [line.rstrip('\n') for line in open(file_name)]
-        properties = {}
         for line in lines:
             if not line.startswith("#"):
                 setting = line.split("=")
@@ -16,7 +15,6 @@ class Configuration:
                         Configuration.config[setting[0]] = setting[1]
 
         print("Configuration obtained")
-        return properties
 
     def get_config(self):
         return self.config
