@@ -10,9 +10,7 @@ class Card:
         self.suit = suit
         self.deck_order = deck_order
 
-
     def get_card_name(self):
         if self.is_tarot:
             return self.name
         return self.name + " of " + self.suit
-

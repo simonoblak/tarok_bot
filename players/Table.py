@@ -16,6 +16,7 @@ class Table:
         self.players = []
         self.deck = Deck.Deck().get_deck()
         self.talon = []
+        self.on_table = []
 
     def set_table(self):
         if "player_names" in config:
@@ -35,4 +36,5 @@ class Table:
             card_start += self.number_of_cards
         self.talon = self.deck[-6:]
 
-
+    def check_rules(self):
+        i = 0
