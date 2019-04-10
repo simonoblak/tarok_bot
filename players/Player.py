@@ -8,6 +8,12 @@ class Player:
         self.radeljc = 0
         self.cards = []
 
+    def check_if_has_tarok_card(self):
+        for card in self.cards:
+            if card.is_tarot:
+                return True
+        return False
+
     def sort_cards(self):
         # https://stackoverflow.com/questions/4010322/sort-a-list-of-class-instances-python/4010558
         self.cards.sort(key=operator.attrgetter('deck_order'))

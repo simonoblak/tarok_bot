@@ -2,6 +2,14 @@ from karte import Deck
 import Configuration
 from players import Table
 
+"""
+SPLOŠNI ZAPISKI
+-   Ker se je v novem pycharmu pokvarila altgr tipka je potreben workaroud
+    Ctrl + Shift + A -> pod 'Actions' poišči 'registry' in obkljukaj ključ
+    'actionSystem.force.alt.gr'
+"""
+
+
 print("Start...")
 
 # Reading configuration.txt file
