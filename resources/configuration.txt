@@ -10,3 +10,5 @@ max_number_of_shuffles=150
 #[table.settings]
 player_number=4
 player_names=Simon,Lucka,Blaz,Petra
+starting_player=0
+obvezna3=True

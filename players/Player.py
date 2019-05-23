@@ -7,6 +7,7 @@ class Player:
         self.points = 0
         self.radeljc = 0
         self.cards = []
+        self.play = "Not decided yet."
 
     def check_if_has_tarok_card(self):
         for card in self.cards:

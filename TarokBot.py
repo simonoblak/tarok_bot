@@ -38,7 +38,7 @@ for kard in deck:
     print(str(c) + ". " + kard.get_card_name())
     c += 1
 print("------------------------------")
-"""
+
 
 print("----------Players Cards----------")
 
@@ -51,7 +51,7 @@ for playa in table.players:
 for t in table.talon:
     print(t.get_card_name())
 print("---------------------------------")
-
+"""
 
 print("----------Players Sorted Cards----------")
 
@@ -65,3 +65,6 @@ for playa in table.players:
 for t in table.talon:
     print(t.get_card_name())
 print("----------------------------------------")
+
+
+table.choose_game()
