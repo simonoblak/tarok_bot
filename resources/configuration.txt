@@ -11,4 +11,5 @@ max_number_of_shuffles=150
 player_number=4
 player_names=Simon,Lucka,Blaz,Petra
 starting_player=0
+sorted_cards=True
 obvezna3=True

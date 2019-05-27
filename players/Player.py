@@ -9,7 +9,9 @@ class Player:
         self.cards = []
         self.play = "Not decided yet."
 
-    def check_if_has_tarok_card(self):
+    def check_if_has_tarok_card(self, is_sort_on):
+        if is_sort_on and self.cards[-1].is_tarot:
+            return True
         for card in self.cards:
             if card.is_tarot:
                 return True

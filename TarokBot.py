@@ -68,3 +68,5 @@ print("----------------------------------------")
 
 
 table.choose_game()
+table.choose_king()
+table.choose_talon()
