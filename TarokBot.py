@@ -70,3 +70,6 @@ print("----------------------------------------")
 table.choose_game()
 table.choose_king()
 table.choose_talon()
+
+
+# https://en.wikipedia.org/wiki/Tarot_card_games
