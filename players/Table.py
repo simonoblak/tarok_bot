@@ -86,7 +86,7 @@ class Table:
 
             for playa in self.players:
                 playa.sort_cards()
-                if not playa.check_if_has_tarok_card(True if config["sorted_cards"] == "True" else False):
+                if not playa.check_if_has_tarok_card():
                     does_everyone_have_a_tarok_card = False
 
             if does_everyone_have_a_tarok_card:

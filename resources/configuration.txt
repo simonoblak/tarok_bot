@@ -13,3 +13,6 @@ player_names=Simon,Lucka,Blaz,Petra
 starting_player=0
 sorted_cards=True
 obvezna3=True
+
+#[bot.parameters]
+playing_bot=RandomBot

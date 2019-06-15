@@ -73,3 +73,24 @@ table.choose_talon()
 
 
 # https://en.wikipedia.org/wiki/Tarot_card_games
+
+
+
+"""
+kaj vsak bot potrebuje?
+
+podatki za vhod v pyquery komponento
+	- samo na začetku
+		- katere karte imam
+		- katero pozicijo imam pri izbiranju talona
+		- pod pogojem da sem izbran 
+			- pošljem info o izbranem kralju
+			- potrebujem info o talonu
+			- po možnosti že tam preberem katere karte si lahko založim
+		
+	- ali sem na vrsti. Lahko je to pogoj, da sploh v naprej kej računa
+	
+	- katera karta je bila v krogu prva odigrana
+	- katere karte so še bile odigrane
+	- 
+"""
