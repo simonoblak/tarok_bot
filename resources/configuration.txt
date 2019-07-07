@@ -1,5 +1,6 @@
 #[tarot.settings]
 tarot_path=resources/tarot_cards.txt
+url=https://valat.si/tarok
 
 #[shuffle.settings]
 min_cut_shuffle=2

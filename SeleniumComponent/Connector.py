@@ -1,21 +1,58 @@
+import Configuration
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 
-text1 = "Pozdravljeni"
-url = "https://valat.si/tarok"
+lines = [line.rstrip('\n') for line in open("../resources/user_config.txt")]
+config = Configuration.Configuration().get_config()
 
+text1 = "Pozdravljeni"
+url = "https://valat.si/tarok" # config["url"]
+
+
+def click_execute(element):
+    driver.execute_script("arguments[0].click();", element)
+
+
+def add_bots(bot):
+    for i in range(0, 3):
+        click_execute(bot)
+
+
+# Disabling notifications from web pages
 options_for_chrome = webdriver.ChromeOptions()
 options_for_chrome.add_argument("--disable-notifications")
 
+# Open chrome and set needed parameters
 driver = webdriver.Chrome(options=options_for_chrome)
 driver.maximize_window()
 driver.get(url)
-#assert "Valat" in driver.title
 driver.implicitly_wait(5)
-#google_registration = driver.find_element_by_class_name("go")
+
+# Find the google account login
 google_registration = driver.find_element_by_css_selector("a[class='go']")
-driver.execute_script("arguments[0].click();", google_registration)
-#google_registration.click()
+click_execute(google_registration)
+
+# Login to google account
+username_input = driver.find_element_by_id("identifierId")
+username_input.send_keys(lines[0] + Keys.ENTER)
+driver.implicitly_wait(5)
+
+pw_input = driver.find_element_by_css_selector("input[name='password']")
+pw_input.send_keys(lines[1] + Keys.ENTER)
+driver.implicitly_wait(5)
+
+# Create new game
+create_new_game = driver.find_element_by_id("new")
+click_execute(create_new_game)
+
+create_game = driver.find_element_by_css_selector("input[name='create']")
+click_execute(create_game)
+
+tezek_bot, vrazji_bot = driver.find_element_by_class_name("ai").find_elements_by_css_selector("span")
+add_bots(vrazji_bot)
+
+
+#driver.close()
 
 """
 elem = driver.find_element_by_id("email")
