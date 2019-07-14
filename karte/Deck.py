@@ -7,11 +7,14 @@ class Deck:
 
     @staticmethod
     def create_deck(path):
+        create_deck_message = "Deck.create_deck()"
+        print("Creating deck of tarot cards: " + create_deck_message)
         lines = [line.rstrip('\n') for line in open(path)]
         for line in lines:
             name, points, rank, suit, deck_order = line.split(";")
             card = Card.Card(name, int(points), int(rank), suit, deck_order)
             Deck.deck.append(card)
+        print("Created deck in: " + create_deck_message)
 
     def shuffle_deck(self, min_limit, max_limit, min_number_of_shuffles, max_number_of_shuffles):
         number_of_shuffles = random.randint(min_number_of_shuffles, max_number_of_shuffles)

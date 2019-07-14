@@ -4,7 +4,7 @@ class Configuration:
     @staticmethod
     def read_config(file_name):
         print("Reading configuration")
-        lines = [line.rstrip('\n') for line in open(file_name)]
+        lines = [line.rstrip('\n') for line in open(file_name, 'r', encoding='utf8')]
         for line in lines:
             if not line.startswith("#"):
                 setting = line.split("=")
@@ -18,3 +18,31 @@ class Configuration:
 
     def get_config(self):
         return self.config
+
+    def pretty_print(self, not_pretty_text, line_length=64):
+        line_half_length = int((line_length - len(not_pretty_text)) / 2)
+        lines = "-" * line_half_length
+        print(lines + not_pretty_text.upper() + lines)
+
+    def check_config(self):
+        errors = []
+        if not 3 <= self.config["player_number"] <= 4:
+            errors.append("player_number number must be 3 or 4")
+
+        if not self.config["url"].startswith("http"):
+            errors.append("url should start with http")
+
+        if not self.config["opponent_bot"] == "Vražji" \
+                and not self.config["opponent_bot"] == "Težek":
+            errors.append("opponent_bot can only be 'Vražji' or 'Težek'")
+
+        if not self.config["playing_bot"] == "RandomBot" \
+                and not self.config["opponent_bot"] == "SemiBot" \
+                and not self.config["opponent_bot"] == "WonderfulBot":
+            errors.append("playing_bot can only be 'RandomBot' or 'SemiBot' or 'WonderfulBot'")
+
+        if len(errors) > 0:
+            self.pretty_print("fix these errors")
+            for e in errors:
+                print(e)
+            raise ValueError("Some of the configuration values are NOT ok!!!")

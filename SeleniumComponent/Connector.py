@@ -1,58 +1,92 @@
 import Configuration
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
 
-lines = [line.rstrip('\n') for line in open("../resources/user_config.txt")]
 config = Configuration.Configuration().get_config()
 
-text1 = "Pozdravljeni"
-url = "https://valat.si/tarok" # config["url"]
 
+class Connector:
+    def __init__(self, url):
+        self.url = url
+        self.driver = self.init_driver()
+        self.is_four_players = config["player_number"] == 4
 
-def click_execute(element):
-    driver.execute_script("arguments[0].click();", element)
+    def init_driver(self):
+        init_driver_message = "Connector.init_driver()"
+        print("Initialising driver for '" + self.url + "': " + init_driver_message)
+        # Disabling notifications from web pages
+        options_for_chrome = webdriver.ChromeOptions()
+        options_for_chrome.add_argument("--disable-notifications")
 
+        # Open chrome and set needed parameters
+        web_driver = webdriver.Chrome(options=options_for_chrome)
+        web_driver.maximize_window()
+        web_driver.get(self.url)
+        web_driver.implicitly_wait(5)
+        print("Finished: " + init_driver_message)
+        return web_driver
 
-def add_bots(bot):
-    for i in range(0, 3):
-        click_execute(bot)
+    def click_execute(self, element):
 
+        print("Connector.click_execute: " + element.text)
+        self.driver.execute_script("arguments[0].click();", element)
 
-# Disabling notifications from web pages
-options_for_chrome = webdriver.ChromeOptions()
-options_for_chrome.add_argument("--disable-notifications")
+    def add_bots(self, bot, number_of_players):
+        for i in range(1, number_of_players):
+            self.click_execute(bot)
 
-# Open chrome and set needed parameters
-driver = webdriver.Chrome(options=options_for_chrome)
-driver.maximize_window()
-driver.get(url)
-driver.implicitly_wait(5)
+    def login(self):
+        user_config = [line.rstrip('\n') for line in open(config["user_config"])]
 
-# Find the google account login
-google_registration = driver.find_element_by_css_selector("a[class='go']")
-click_execute(google_registration)
+        # Find the google account login
+        google_registration = self.driver.find_element_by_css_selector("a[class='go']")
+        self.click_execute(google_registration)
 
-# Login to google account
-username_input = driver.find_element_by_id("identifierId")
-username_input.send_keys(lines[0] + Keys.ENTER)
-driver.implicitly_wait(5)
+        # Login to google account
+        username_input = self.driver.find_element_by_id("identifierId")
+        username_input.send_keys(user_config[0] + Keys.ENTER)
+        self.driver.implicitly_wait(5)
 
-pw_input = driver.find_element_by_css_selector("input[name='password']")
-pw_input.send_keys(lines[1] + Keys.ENTER)
-driver.implicitly_wait(5)
+        pw_input = self.driver.find_element_by_css_selector("input[name='password']")
+        pw_input.send_keys(user_config[1] + Keys.ENTER)
+        self.driver.implicitly_wait(5)
 
-# Create new game
-create_new_game = driver.find_element_by_id("new")
-click_execute(create_new_game)
+    def create_game(self, opponent_bot):
+        create_game_message = "Connector.create_game()"
+        try:
+            # Leave the try catch for the other parameters for setting the game
 
-create_game = driver.find_element_by_css_selector("input[name='create']")
-click_execute(create_game)
+            # Create new game
+            create_new_game = self.driver.find_element_by_id("new")
+            self.click_execute(create_new_game)
 
-tezek_bot, vrazji_bot = driver.find_element_by_class_name("ai").find_elements_by_css_selector("span")
-add_bots(vrazji_bot)
+            if config["player_number"] == 3:
+                set_for_3_players = self.driver\
+                    .find_element_by_css_selector("div[class='seats']")\
+                    .find_element_by_id("seats3")
 
+                self.click_execute(set_for_3_players)
 
-#driver.close()
+            # TODO set the other elements here
+
+            create_game = self.driver.find_element_by_css_selector("input[name='create']")
+            self.click_execute(create_game)
+
+            bot_difficulty = self.driver.find_element_by_class_name("ai").find_elements_by_css_selector("span")
+            for bot in bot_difficulty:
+                if opponent_bot == bot.text:
+                    self.add_bots(bot, config["player_number"])
+                    break
+        except NoSuchElementException:
+            print("No element found in: " + create_game_message)
+
+    def choose_game(self):
+        self.driver.find_element_by_id("bid").find_element_by_class_name("choice")
+
+    def close_connection(self):
+        self.driver.close()
+
 
 """
 elem = driver.find_element_by_id("email")

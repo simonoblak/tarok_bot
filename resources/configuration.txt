@@ -1,6 +1,7 @@
 #[tarot.settings]
 tarot_path=resources/tarot_cards.txt
 url=https://valat.si/tarok
+user_config=resources/user_config.txt
 
 #[shuffle.settings]
 min_cut_shuffle=2
@@ -16,4 +17,7 @@ sorted_cards=True
 obvezna3=True
 
 #[bot.parameters]
+#RandomBot, SemiBot, WonderfulBot
 playing_bot=RandomBot
+#Vražji, Težek
+opponent_bot=Vražji

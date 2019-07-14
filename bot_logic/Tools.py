@@ -16,3 +16,8 @@ class Tools:
 
     def is_my_turn(self, start_time, end_time):
         self.my_turn = start_time != end_time
+
+    def convert_online_cards_into_bot_format(self, online_cards):
+
+        bot_cards = online_cards[0]
+        return bot_cards
