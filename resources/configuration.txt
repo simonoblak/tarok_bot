@@ -1,23 +1,27 @@
-#[tarot.settings]
+#####TAROT SETTINGS
 tarot_path=resources/tarot_cards.txt
 url=https://valat.si/tarok
 user_config=resources/user_config.txt
 
-#[shuffle.settings]
+#####SHUFFLE SETTINGS
 min_cut_shuffle=2
 max_cut_shuffle=52
 min_number_of_shuffles=100
 max_number_of_shuffles=150
 
-#[table.settings]
+#####TABLE SETTINGS
 player_number=4
 player_names=Simon,Lucka,Blaz,Petra
 starting_player=0
 sorted_cards=True
 obvezna3=True
+not_allowed_games=Valat,Barvni valat,Odprti berač,Berač
 
-#[bot.parameters]
+#####BOT PARAMETERS
 #RandomBot, SemiBot, WonderfulBot
 playing_bot=RandomBot
 #Vražji, Težek
 opponent_bot=Vražji
+
+#####CARD SETTINGS
+suits=Hearts,Diamonds,Clubs,Spades

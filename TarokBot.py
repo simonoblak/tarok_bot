@@ -1,3 +1,4 @@
+import time
 from karte import Deck
 import Configuration
 from players import Table
@@ -30,6 +31,13 @@ url = config["url"]
 valat = Connector.Connector(url)
 valat.login()
 valat.create_game(config["opponent_bot"])
+time.sleep(15)
+
+# GAME
+valat.get_cards()
+valat.choose_game()
+valat.choose_king()
+valat.choose_talon()
 
 
 

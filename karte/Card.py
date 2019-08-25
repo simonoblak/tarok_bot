@@ -8,8 +8,19 @@ class Card:
         self.is_tarot = "tarot" == suit
         self.suit = suit
         self.deck_order = deck_order
+        self.alt = str(self.rank)
 
     def get_card_name(self):
         if self.is_tarot:
             return self.name
         return self.name + " of " + self.suit
+
+    def set_alt(self):
+        if self.suit == "Hearts":
+            self.alt = "♥" + self.alt
+        elif self.suit == "Diamonds":
+            self.alt = "♦" + self.alt
+        elif self.suit == "Clubs":
+            self.alt = "♥" + self.alt
+        elif self.suit == "Spades":
+            self.alt = "♣" + self.alt

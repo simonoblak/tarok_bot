@@ -13,6 +13,7 @@ class Deck:
         for line in lines:
             name, points, rank, suit, deck_order = line.split(";")
             card = Card.Card(name, int(points), int(rank), suit, deck_order)
+            card.set_alt()
             Deck.deck.append(card)
         print("Created deck in: " + create_deck_message)
 
