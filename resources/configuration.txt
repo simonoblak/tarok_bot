@@ -15,7 +15,7 @@ player_names=Simon,Lucka,Blaz,Petra
 starting_player=0
 sorted_cards=True
 obvezna3=True
-not_allowed_games=Valat,Barvni valat,Odprti berač,Berač
+not_allowed_games=Valat,Barvni valat,Odprti berač,Berač,Solo tri,Solo dve,Solo ena,Solo brez
 
 #####BOT PARAMETERS
 #RandomBot, SemiBot, WonderfulBot

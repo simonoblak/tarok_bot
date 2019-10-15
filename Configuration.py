@@ -41,7 +41,8 @@ class Configuration:
                 and not self.config["opponent_bot"] == "WonderfulBot":
             errors.append("playing_bot can only be 'RandomBot' or 'SemiBot' or 'WonderfulBot'")
 
-        not_allowed_games = ["Valat", "Barvni valat", "Odprti berač", "Berač"]
+        not_allowed_games = ["Valat", "Barvni valat", "Odprti berač", "Berač",
+                             "Solo tri", "Solo dve", "Solo ena", "Solo brez"]
         for game in self.config["not_allowed_games"].split(","):
             if game not in not_allowed_games:
                 errors.append("Not allowed games parameter has an unexpected value")

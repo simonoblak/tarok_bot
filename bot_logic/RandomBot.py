@@ -8,16 +8,16 @@ config = Configuration.Configuration().get_config()
 
 class RandomBot:
     def __init__(self, cards):
-        #self.deck = Deck.Deck().get_deck()
+        # self.deck = Deck.Deck().get_deck()
         self.cards = cards
-        self.king_indexes = self.get_king_indexes()
+        self.king_indexes = []
 
     def choose_king(self):
         suits = config["suits"].split(",")
         for card in self.cards:
             if card.name.lower() == "king":
                 suits.remove(card.suit)
-
+        self.king_indexes = self.get_king_indexes()
         random_suite = random.choice(suits)
         return random_suite
 

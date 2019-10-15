@@ -31,13 +31,26 @@ url = config["url"]
 valat = Connector.Connector(url)
 valat.login()
 valat.create_game(config["opponent_bot"])
-time.sleep(15)
+for i in range(0, 15):
+    print()
+    time.sleep(1)
 
 # GAME
 valat.get_cards()
-valat.choose_game()
-valat.choose_king()
-valat.choose_talon()
+while True:
+    if valat.state == "bid":
+        valat.choose_game()
+    elif valat.state == "call":
+        valat.choose_king()
+    elif valat.state == "talon":
+        valat.choose_talon()
+    elif valat.state == "bonus":
+        valat.napoved()
+    elif valat.state == "game":
+        valat.the_game()
+    elif valat.state == "end_game":
+        break
+    valat.time_util(1, "TarokBot(State) -> " + valat.state)
 
 
 

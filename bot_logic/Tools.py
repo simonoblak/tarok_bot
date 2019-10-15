@@ -42,17 +42,17 @@ class Tools:
         print("Tools.choose_king(): Suit -> " + suite)
         return suite
 
-    def choose_talon(self):
+    def choose_talon(self, talon):
         if self.game == "Tri":
-            index = self.playing_bot.choose_talon(2, [])
+            index = self.playing_bot.choose_talon(3, talon)
         elif self.game == "Dve":
-            index = self.playing_bot.choose_talon(3, [])
+            index = self.playing_bot.choose_talon(2, talon)
         elif self.game == "Eno":
-            index = self.playing_bot.choose_talon(6, [])
+            index = self.playing_bot.choose_talon(1, talon)
         else:
             # TODO klele je treba še za igro solo brez pohendlat če bo potrebno
             index = 0
-        print("Tools.choose_talon(): Index -> " + index)
+        print("Tools.choose_talon(): Index -> " + str(index))
         return index
 
     def convert_online_cards_into_bot_format(self, online_cards):

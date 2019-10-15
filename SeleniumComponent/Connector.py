@@ -27,6 +27,8 @@ class Connector:
         self.player_name = ""
         self.tool = bot_logic.Tools.Tools()
         self.my_bot_playing = False
+        self.state = "bid"
+        self.online_cards = []
 
     def init_driver(self):
         init_driver_message = "Connector.init_driver()"
@@ -78,6 +80,7 @@ class Connector:
             # Leave the try catch for the other parameters for setting the game
 
             # Create new game
+            self.time_util(30, "pred klikom za novo igro")
             self.driver.implicitly_wait(3)
             create_new_game = self.driver.find_element_by_id("new")
             self.click_execute(create_new_game)
@@ -111,6 +114,8 @@ class Connector:
                     self.add_bots(bot, config["player_number"])
                     break
 
+            #self.state = "Game created"
+
         except NoSuchElementException:
             print("No element found in: " + create_game_message)
             raise NoSuchElementException
@@ -118,11 +123,12 @@ class Connector:
     def get_cards(self):
         get_cards_message = "Connector.get_cards()"
         print(get_cards_message + ": Getting cards...")
+        state_name = "Get Cards"
 
         alts = []
         try:
-            online_cards = self.driver.find_element_by_id("cards").find_elements_by_css_selector("img")
-            for online_card in online_cards:
+            self.online_cards = self.driver.find_element_by_id("cards").find_elements_by_css_selector("img")
+            for online_card in self.online_cards:
                 alt = online_card.get_attribute("alt")
                 alts.append(alt)
                 print(get_cards_message + ": Added -> " + alt)
@@ -135,9 +141,11 @@ class Connector:
     def choose_game(self):
         choose_game_message = "Connector.choose_game()"
         print(choose_game_message + ": Choosing game")
+        state_name = "bid"
+        # self.check_state(state_name)
 
-        timers = self.get_timers()
         while True:
+            timers = self.get_timers(2)
             my_turn = self.tool.is_my_turn(timers)
             print(choose_game_message + ": tool.is_my_turn -> " + str(my_turn))
             if my_turn:
@@ -150,8 +158,8 @@ class Connector:
             not_allowed_games = config["not_allowed_games"].split(",")
 
             while True:
-                #self.driver.implicitly_wait(10)
-                self.time_util(10, "choose_game")
+                # self.driver.implicitly_wait(10)
+                self.time_util(5, "choose_game")
                 game_elements = self.driver.find_element_by_id("bid")\
                     .find_element_by_class_name("choice")\
                     .find_elements_by_class_name("popular")
@@ -165,17 +173,15 @@ class Connector:
                         self.tool.game = highlighted_game.text
                         break
 
-                self.driver.implicitly_wait(5)
-                self.time_util(5, "Čakamo na izbiro drugih igralcov")
-                print(choose_game_message +
-                      ": Kralji class -> " +
-                      self.driver.find_element_by_id("call").get_attribute("class"))
-                if self.driver.find_element_by_id("call").get_attribute("class") == "show":
-                    if self.driver.find_element_by_id("call").find_element_by_css_selector("h2").text == self.player_name:
+                # self.driver.implicitly_wait(5)
+                self.time_util(3, "Čakamo na izbiro drugih igralcov")
+                self.check_state(state_name)
+                if self.state == "call":
+                    if self.driver.find_element_by_id("call").find_element_by_css_selector("h2").text.startswith(self.player_name):
                         self.my_bot_playing = True
                     choose_over = True
 
-                if choose_over:
+                if choose_over or not self.check_state(state_name):
                     break
 
         except NoSuchElementException:
@@ -185,26 +191,109 @@ class Connector:
     def choose_king(self):
         choose_king_message = "Connector.choose_king()"
         print(choose_king_message + ": Choosing King")
-        suite = self.tool.choose_king()
-        try:
-            if suite == 'Clubs':
-                self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♣8']"))
-            elif suite == 'Hearts':
-                self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♥8']"))
-            elif suite == 'Spades':
-                self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♠8']"))
-            elif suite == 'Diamonds':
-                self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♦8']"))
-        except NoSuchElementException:
-            print("Error in: " + choose_king_message)
-            raise NoSuchElementException
+        state_name = "call"
+
+        if not self.check_state(state_name):
+            print(choose_king_message + ": Ending because not in right state")
+            return
+
+        if self.my_bot_playing:
+            self.time_util(1, "Izbiramo kralja")
+            suite = self.tool.choose_king()
+            try:
+                if suite == 'Clubs':
+                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♣8']"))
+                elif suite == 'Hearts':
+                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♥8']"))
+                elif suite == 'Spades':
+                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♠8']"))
+                elif suite == 'Diamonds':
+                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♦8']"))
+            except NoSuchElementException:
+                print("Error in: " + choose_king_message)
+                raise NoSuchElementException
+        else:
+            self.time_util(1, "Čakamo da drug igralec izbere kralja")
 
     def choose_talon(self):
         choose_talon_message = "Connector.choose_talon()"
         print(choose_talon_message + ": Choosing talon")
-        talon_index = self.tool.choose_talon()
-        #try:
-        #    self.driver.find_element_by_id("talon").find_element_by_class_name("data")
+        state_name = "talon"
+
+        if not self.check_state(state_name):
+            print(choose_talon_message + ": Ending because not in right state")
+            return
+
+        talon_online_cards = []
+
+        if self.my_bot_playing:
+            try:
+                talon_cards = self.driver.find_element_by_id("talon").find_element_by_class_name("data")\
+                    .find_elements_by_css_selector("img")
+                for talon_card in talon_cards:
+                    talon_online_cards.append(talon_card.get_attribute("alt"))
+                talon_index = self.tool.choose_talon(talon_online_cards)
+                self.click_execute(talon_cards[talon_index])
+            except NoSuchElementException:
+                print("Error in: " + choose_talon_message)
+                raise NoSuchElementException
+        else:
+            self.time_util(1, "Izbira talona od drugega igralca")
+
+    def napoved(self):
+        napoved_message = "Connector.napoved()"
+        print(napoved_message + ": Napoved naprej")
+        state_name = "bonus"
+
+        if not self.check_state(state_name):
+            print(napoved_message + ": Ending because not in right state")
+            return
+
+        timers = self.get_timers(1)
+        if timers[0] == timers[1]:
+            return
+
+        try:
+            self.click_execute(self.driver.find_element_by_id("bonus")
+                               .find_element_by_css_selector("input[name='announce']"))
+        except NoSuchElementException:
+            print("Error in: " + napoved_message)
+            raise NoSuchElementException
+
+    def the_game(self):
+        the_game_message = "Connector.the_game()"
+        print(the_game_message + ": Starting game")
+        state_name = "game"
+
+        if not self.check_state(state_name):
+            print(the_game_message + ": Ending because not in right state")
+            return
+        # end = False
+        try:
+            while True:
+                timers = self.get_timers(4)
+                if timers[0] != timers[1]:
+                    self.get_cards()
+                    index = 0
+                    while index < len(self.online_cards):
+                        online_card = self.online_cards[index]
+                        if "disabled" not in online_card.get_attribute("class"):
+                            self.click_execute(online_card)
+                            # print("Deleting card: " + online_card.get_attribute("alt"))
+                            # del(self.online_cards[index])
+                            break
+                        else:
+                            index += 1
+
+                if len(self.online_cards) == 0:
+                    break
+
+
+                # stacks = self.driver.find_element_by_id("desk")
+                # table_cards = stacks.find_element_by_id("stack3")
+        except NoSuchElementException:
+            print("Error in: " + the_game_message)
+            raise NoSuchElementException
 
     def get_timers(self, between_time=5):
         get_timers_message = "Connector.get_timers()"
@@ -229,6 +318,34 @@ class Connector:
         for i in range(0, seconds):
             print("Connector.time_util(" + location + "): " + str(seconds - i))
             time.sleep(1)
+
+    def check_state(self, state_name):
+        try:
+            bid_state = self.driver.find_element_by_id("bid").get_attribute("class") == "show"
+            call_state = self.driver.find_element_by_id("call").get_attribute("class") == "show"
+            talon_state = self.driver.find_element_by_id("talon").get_attribute("class") == "show"
+            bonus_state = self.driver.find_element_by_id("bonus").get_attribute("class") == "show"
+        except NoSuchElementException:
+            print("ERROR in check_state()")
+            raise NoSuchElementException
+
+        print("states:\nbid_state = " + bid_state.__str__() + "\ncall_state = " + call_state.__str__() +
+              "\ntalon_state = " + talon_state.__str__() + "\nbonus_state = " + bonus_state.__str__())
+        if bid_state:
+            self.state = "bid"
+        elif call_state:
+            self.state = "call"
+        elif talon_state:
+            self.state = "talon"
+        elif bonus_state:
+            self.state = "bonus"
+        else:
+            self.state = "game"
+
+        if state_name != self.state:
+            print("WRONG STATE. Current state: " + state_name + ", Last known state: " + self.state)
+            return False
+        return True
 
     def close_connection(self):
         self.driver.close()
