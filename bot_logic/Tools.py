@@ -42,23 +42,46 @@ class Tools:
         print("Tools.choose_king(): Suit -> " + suite)
         return suite
 
-    def choose_talon(self, talon):
+    def choose_talon_step_1(self, talon):
+        """
         if self.game == "Tri":
-            index = self.playing_bot.choose_talon(3, talon)
+            index = self.playing_bot.choose_talon_step_1(3, talon)
         elif self.game == "Dve":
-            index = self.playing_bot.choose_talon(2, talon)
+            index = self.playing_bot.choose_talon_step_1(2, talon)
         elif self.game == "Eno":
-            index = self.playing_bot.choose_talon(1, talon)
+            index = self.playing_bot.choose_talon_step_1(1, talon)
         else:
             # TODO klele je treba še za igro solo brez pohendlat če bo potrebno
             index = 0
+        """
+        g = 3 if self.game == "Tri" else 2 if self.game == "Dve" else 1 if self.game == "Eno" else 0
+        index = self.playing_bot.choose_talon_step_1(g, talon)
         print("Tools.choose_talon(): Index -> " + str(index))
         return index
 
+    def choose_talon_step_2(self, non_disabled_card_indexes):
+        """
+        if self.game == "Tri":
+            return self.playing_bot.choose_talon_step_2(3, non_disabled_card_indexes)
+        elif self.game == "Dve":
+            return self.playing_bot.choose_talon_step_2(2, non_disabled_card_indexes)
+        elif self.game == "Eno":
+            return self.playing_bot.choose_talon_step_2(1, non_disabled_card_indexes)
+        else:
+            return []
+        """
+        # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
+        g = 3 if self.game == "Tri" else 2 if self.game == "Dve" else 1 if self.game == "Eno" else 0
+        return self.playing_bot.choose_talon_step_2(g, non_disabled_card_indexes)
+
     def convert_online_cards_into_bot_format(self, online_cards):
+        self.cards = []
         for online_card in online_cards:
             for card in self.deck:
                 if online_card == card.alt:
                     self.cards.append(card)
         for c in self.cards:
             print("Tools.convert_online_cards_into_bot_format(): " + c.get_card_name())
+
+    def play_card(self, non_disabled_card_indexes):
+        return self.playing_bot.play_card(non_disabled_card_indexes)

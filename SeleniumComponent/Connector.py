@@ -80,7 +80,7 @@ class Connector:
             # Leave the try catch for the other parameters for setting the game
 
             # Create new game
-            self.time_util(30, "pred klikom za novo igro")
+            self.time_util(20, "pred klikom za novo igro")
             self.driver.implicitly_wait(3)
             create_new_game = self.driver.find_element_by_id("new")
             self.click_execute(create_new_game)
@@ -228,12 +228,24 @@ class Connector:
 
         if self.my_bot_playing:
             try:
+                # Step 1 - izbira talona
                 talon_cards = self.driver.find_element_by_id("talon").find_element_by_class_name("data")\
                     .find_elements_by_css_selector("img")
+                print(choose_talon_message + ": po vrsti karte iz talona")
                 for talon_card in talon_cards:
+                    print(talon_card.get_attribute("alt"))
                     talon_online_cards.append(talon_card.get_attribute("alt"))
-                talon_index = self.tool.choose_talon(talon_online_cards)
+                talon_index = self.tool.choose_talon_step_1(talon_online_cards)
                 self.click_execute(talon_cards[talon_index])
+
+                # Step 2 - Zalaganje
+                self.get_cards()
+                non_disabled_card_indexes = self.get_non_disabled_card_indexes()
+                disposed_cards_index = self.tool.choose_talon_step_2(non_disabled_card_indexes)
+                for card_index in disposed_cards_index:
+                    print(choose_talon_message + ": Card put down -> " +
+                          self.online_cards[card_index].get_attribute("alt"))
+                    self.click_execute(self.online_cards[card_index])
             except NoSuchElementException:
                 print("Error in: " + choose_talon_message)
                 raise NoSuchElementException
@@ -270,10 +282,16 @@ class Connector:
             return
         # end = False
         try:
-            while True:
+            # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
+            rounds_left = 12 if self.is_four_players else 16
+            while rounds_left > 0:
                 timers = self.get_timers(4)
                 if timers[0] != timers[1]:
                     self.get_cards()
+                    play = self.tool.play_card(self.get_non_disabled_card_indexes())
+                    self.click_execute(self.online_cards[play])
+                    rounds_left -= 1
+                    """
                     index = 0
                     while index < len(self.online_cards):
                         online_card = self.online_cards[index]
@@ -284,16 +302,19 @@ class Connector:
                             break
                         else:
                             index += 1
-
-                if len(self.online_cards) == 0:
-                    break
-
-
+                    """
                 # stacks = self.driver.find_element_by_id("desk")
                 # table_cards = stacks.find_element_by_id("stack3")
         except NoSuchElementException:
             print("Error in: " + the_game_message)
             raise NoSuchElementException
+
+    def get_non_disabled_card_indexes(self):
+        indexes = []
+        for i in range(0, len(self.online_cards)):
+            if "disabled" not in self.online_cards[i].get_attribute("class"):
+                indexes.append(i)
+        return indexes
 
     def get_timers(self, between_time=5):
         get_timers_message = "Connector.get_timers()"
@@ -349,6 +370,30 @@ class Connector:
 
     def close_connection(self):
         self.driver.close()
+
+"""
+Za prvo available karto
+        try:
+            while True:
+                timers = self.get_timers(4)
+                if timers[0] != timers[1]:
+                    self.get_cards()
+                    index = 0
+                    while index < len(self.online_cards):
+                        online_card = self.online_cards[index]
+                        if "disabled" not in online_card.get_attribute("class"):
+                            self.click_execute(online_card)
+                            # print("Deleting card: " + online_card.get_attribute("alt"))
+                            # del(self.online_cards[index])
+                            break
+                        else:
+                            index += 1
+
+                if len(self.online_cards) == 0:
+                    break
+
+"""
+
 
 
 """
