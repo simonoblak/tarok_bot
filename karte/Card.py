@@ -20,7 +20,7 @@ class Card:
             self.alt = "♥" + self.alt
         elif self.suit == "Diamonds":
             self.alt = "♦" + self.alt
-        elif self.suit == "Clubs":
-            self.alt = "♠" + self.alt
         elif self.suit == "Spades":
+            self.alt = "♠" + self.alt
+        elif self.suit == "Clubs":
             self.alt = "♣" + self.alt

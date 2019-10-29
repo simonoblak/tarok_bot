@@ -42,8 +42,5 @@ class RandomBot:
                 indexes.append(i)
         return indexes
 
-    def play_card(self, non_disabled_card_indexes):
+    def play_card(self, non_disabled_card_indexes, table, suite):
         return random.sample(set(non_disabled_card_indexes), 1)[0]
-
-
-

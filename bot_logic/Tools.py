@@ -14,7 +14,6 @@ class Tools:
         self.deck = Deck.Deck().get_deck()
         self.played_cards = []
         self.position_in_talon = 3
-        self.my_turn = False
         self.players = []
         self.cards = []
         self.playing_bot = self.create_bot(self.cards)
@@ -34,15 +33,14 @@ class Tools:
         player.cards = cards_in_some_format
 
     def is_my_turn(self, times):
-        self.my_turn = times[0] != times[1]
-        return self.my_turn
+        return times[0] != times[1]
 
     def choose_king(self):
         suite = self.playing_bot.choose_king()
         print("Tools.choose_king(): Suit -> " + suite)
         return suite
 
-    def choose_talon_step_1(self, talon):
+    def choose_talon_step_1(self, online_talon):
         """
         if self.game == "Tri":
             index = self.playing_bot.choose_talon_step_1(3, talon)
@@ -55,6 +53,7 @@ class Tools:
             index = 0
         """
         g = 3 if self.game == "Tri" else 2 if self.game == "Dve" else 1 if self.game == "Eno" else 0
+        talon = self.convert_alts_to_cards(online_talon)
         index = self.playing_bot.choose_talon_step_1(g, talon)
         print("Tools.choose_talon(): Index -> " + str(index))
         return index
@@ -72,16 +71,40 @@ class Tools:
         """
         # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
         g = 3 if self.game == "Tri" else 2 if self.game == "Dve" else 1 if self.game == "Eno" else 0
+        print("G in choose_talon_step_2: " + str(g))
         return self.playing_bot.choose_talon_step_2(g, non_disabled_card_indexes)
 
     def convert_online_cards_into_bot_format(self, online_cards):
-        self.cards = []
-        for online_card in online_cards:
-            for card in self.deck:
-                if online_card == card.alt:
-                    self.cards.append(card)
+        self.playing_bot.cards = self.cards = self.convert_alts_to_cards(online_cards)
         for c in self.cards:
             print("Tools.convert_online_cards_into_bot_format(): " + c.get_card_name())
 
-    def play_card(self, non_disabled_card_indexes):
-        return self.playing_bot.play_card(non_disabled_card_indexes)
+    def convert_alts_to_cards(self, online_cards):
+        tab = []
+        for online_card in online_cards:
+            for card in self.deck:
+                if online_card == card.alt:
+                    tab.append(card)
+        return tab
+
+    def play_card(self, non_disabled_card_indexes, table):
+        suit = ""
+        for player in config["player_positions"].split(","):
+            if table[player] != "":
+                suit = self.get_suit(table[player])
+                break
+
+        """
+        if table["stack1"] != "":
+            suit = self.get_suit(table["stack1"])
+        elif table["stack2"] != "":
+            suit = self.get_suit(table["stack2"])
+        elif table["stack3"] != "":
+            suit = self.get_suit(table["stack3"])
+        else:
+            suit = ""
+        """
+        return self.playing_bot.play_card(non_disabled_card_indexes, table, suit)
+
+    def get_suit(self, alt):
+        return "tarot" if isinstance(alt, int) else alt[0]

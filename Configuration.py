@@ -9,10 +9,8 @@ class Configuration:
             if not line.startswith("#"):
                 setting = line.split("=")
                 if len(setting) == 2:
-                    try:
-                        Configuration.config[setting[0]] = int(setting[1])
-                    except ValueError:
-                        Configuration.config[setting[0]] = setting[1]
+                    # Note, isdigit() does not work for float or negative numbers
+                    Configuration.config[setting[0]] = int(setting[1]) if setting[1].isdigit() else setting[1]
 
         print("Configuration obtained")
 
@@ -37,8 +35,8 @@ class Configuration:
             errors.append("opponent_bot can only be 'Vražji' or 'Težek'")
 
         if not self.config["playing_bot"] == "RandomBot" \
-                and not self.config["opponent_bot"] == "SemiBot" \
-                and not self.config["opponent_bot"] == "WonderfulBot":
+                and not self.config["playing_bot"] == "SemiBot" \
+                and not self.config["playing_bot"] == "WonderfulBot":
             errors.append("playing_bot can only be 'RandomBot' or 'SemiBot' or 'WonderfulBot'")
 
         not_allowed_games = ["Valat", "Barvni valat", "Odprti berač", "Berač",

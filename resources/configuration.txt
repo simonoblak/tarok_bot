@@ -16,10 +16,12 @@ starting_player=0
 sorted_cards=True
 obvezna3=True
 not_allowed_games=Valat,Barvni valat,Odprti berač,Berač,Solo tri,Solo dve,Solo ena,Solo brez
+# stack0 - me, stack1 - right, stack2 - up, stack3 - left
+player_positions=stack1,stack2,stack3
 
 #####BOT PARAMETERS
 #RandomBot, SemiBot, WonderfulBot
-playing_bot=RandomBot
+playing_bot=SemiBot
 #Vražji, Težek
 opponent_bot=Vražji
 

@@ -31,9 +31,7 @@ url = config["url"]
 valat = Connector.Connector(url)
 valat.login()
 valat.create_game(config["opponent_bot"])
-for i in range(0, 15):
-    print()
-    time.sleep(1)
+valat.time_util(18, "Main Loop")
 
 # GAME
 valat.get_cards()
@@ -49,7 +47,7 @@ while True:
     elif valat.state == "game":
         valat.the_game()
     elif valat.state == "end_game":
-        break
+        valat.time_util(20, "Waiting for next game")
     valat.time_util(1, "TarokBot(State) -> " + valat.state)
 
 

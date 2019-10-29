@@ -9,6 +9,10 @@ config = Configuration.Configuration().get_config()
 
 
 """
+NOTES
+https://selenium-python.readthedocs.io/installation.html
+
+
 https://stackoverflow.com/questions/45347675/make-selenium-wait-10-seconds
 
 set_page_load_timeout - Sets the amount of time to wait for a page load to complete before throwing an error. If the timeout is negative, page loads can be indefinite.
@@ -145,8 +149,7 @@ class Connector:
         # self.check_state(state_name)
 
         while True:
-            timers = self.get_timers(2)
-            my_turn = self.tool.is_my_turn(timers)
+            my_turn = self.tool.is_my_turn(self.get_timers(1))
             print(choose_game_message + ": tool.is_my_turn -> " + str(my_turn))
             if my_turn:
                 break
@@ -159,7 +162,7 @@ class Connector:
 
             while True:
                 # self.driver.implicitly_wait(10)
-                self.time_util(5, "choose_game")
+                # self.time_util(5, "choose_game")
                 game_elements = self.driver.find_element_by_id("bid")\
                     .find_element_by_class_name("choice")\
                     .find_elements_by_class_name("popular")
@@ -239,13 +242,20 @@ class Connector:
                 self.click_execute(talon_cards[talon_index])
 
                 # Step 2 - Zalaganje
+                self.time_util(1)
                 self.get_cards()
                 non_disabled_card_indexes = self.get_non_disabled_card_indexes()
+                print("$$$$$$$$$$ Non disabled card indexes $$$$$$$$$$$$")
+                print(non_disabled_card_indexes)
                 disposed_cards_index = self.tool.choose_talon_step_2(non_disabled_card_indexes)
+                print("$$$$$$$$$$ disposed_cards_index $$$$$$$$$$$$")
+                print(disposed_cards_index)
+                print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
                 for card_index in disposed_cards_index:
                     print(choose_talon_message + ": Card put down -> " +
                           self.online_cards[card_index].get_attribute("alt"))
                     self.click_execute(self.online_cards[card_index])
+                    self.time_util(1, "Waiting for another card to put down...")
             except NoSuchElementException:
                 print("Error in: " + choose_talon_message)
                 raise NoSuchElementException
@@ -261,8 +271,7 @@ class Connector:
             print(napoved_message + ": Ending because not in right state")
             return
 
-        timers = self.get_timers(1)
-        if timers[0] == timers[1]:
+        if not self.tool.is_my_turn(self.get_timers(1)):
             return
 
         try:
@@ -281,30 +290,33 @@ class Connector:
             print(the_game_message + ": Ending because not in right state")
             return
         # end = False
+        # stack0 - me, stack1 - right, stack2 - up, stack3 - left
+        player_positions = {"stack0": "", "stack1": "", "stack2": "", "stack3": ""}
+
         try:
             # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
             rounds_left = 12 if self.is_four_players else 16
             while rounds_left > 0:
-                timers = self.get_timers(4)
-                if timers[0] != timers[1]:
+                if self.tool.is_my_turn(self.get_timers(2)):
+                    table = self.get_cards_from_table(player_positions)
+                    print("############ TABLE ############")
+                    print(table)
+                    print("###############################")
                     self.get_cards()
-                    play = self.tool.play_card(self.get_non_disabled_card_indexes())
+                    indexes = self.get_non_disabled_card_indexes()
+                    play = self.tool.play_card(indexes, table)
                     self.click_execute(self.online_cards[play])
                     rounds_left -= 1
-                    """
-                    index = 0
-                    while index < len(self.online_cards):
-                        online_card = self.online_cards[index]
-                        if "disabled" not in online_card.get_attribute("class"):
-                            self.click_execute(online_card)
-                            # print("Deleting card: " + online_card.get_attribute("alt"))
-                            # del(self.online_cards[index])
-                            break
-                        else:
-                            index += 1
-                    """
-                # stacks = self.driver.find_element_by_id("desk")
-                # table_cards = stacks.find_element_by_id("stack3")
+                    print("Rounds Left: " + str(rounds_left))
+
+                    # TODO this might come in handy https://stackoverflow.com/a/51534196/11189926
+
+                    # Reset the map
+                    for p in player_positions:
+                        player_positions[p] = ""
+
+            # self.time_util(15, "Waiting for next game")
+            self.state = "end_game"
         except NoSuchElementException:
             print("Error in: " + the_game_message)
             raise NoSuchElementException
@@ -312,20 +324,50 @@ class Connector:
     def get_non_disabled_card_indexes(self):
         indexes = []
         for i in range(0, len(self.online_cards)):
+            self.driver.implicitly_wait(1)
+            print(self.online_cards[i].get_attribute("alt"))
+            print(self.online_cards[i].get_attribute("class"))
             if "disabled" not in self.online_cards[i].get_attribute("class"):
                 indexes.append(i)
+
+        """
+        for i in range(0, len(self.online_cards)):
+            while True:
+                self.driver.implicitly_wait(1)
+                if "disabled" not in self.online_cards[i].get_attribute("class"):
+                    indexes.append(i)
+                
+                c = self.online_cards[i].get_attribute("class")
+                if c is not None:
+                    
+                        break
+                else:
+                    print("Something wrong, there is no class in 'Connector.get_non_disabled_card_indexes()'")
+                    self.time_util(1)
+        """
         return indexes
+
+    def get_cards_from_table(self, player_positions):
+        message = "Connector.get_cards_from_table(): "
+        for position in ["stack1", "stack2", "stack3"]:  # config["player_positions"].split(",")
+            elements = self.driver.find_element_by_id(position).find_elements_by_css_selector("img")
+            if len(elements) > 0:
+                alt = elements[0].get_attribute("alt")
+                player_positions[position] = int(alt) if alt.isdigit() else alt
+            else:
+                print(message + "player: (" + position + ") has no card")
+        return player_positions
 
     def get_timers(self, between_time=5):
         get_timers_message = "Connector.get_timers()"
         print(get_timers_message + ": Start")
 
-        start = self.driver.find_element_by_id("right").\
-            find_element_by_id("timer").\
+        start = self.driver.find_element_by_id("right"). \
+            find_element_by_id("timer"). \
             find_element_by_class_name("time").text
 
+        print("Start timer obtained (" + start + "), waiting for end")
         for i in range(0, between_time):
-            print("Start timer obtained (" + start + "), waiting for end")
             time.sleep(1)
 
         end = self.driver.find_element_by_id("right"). \
@@ -370,76 +412,3 @@ class Connector:
 
     def close_connection(self):
         self.driver.close()
-
-"""
-Za prvo available karto
-        try:
-            while True:
-                timers = self.get_timers(4)
-                if timers[0] != timers[1]:
-                    self.get_cards()
-                    index = 0
-                    while index < len(self.online_cards):
-                        online_card = self.online_cards[index]
-                        if "disabled" not in online_card.get_attribute("class"):
-                            self.click_execute(online_card)
-                            # print("Deleting card: " + online_card.get_attribute("alt"))
-                            # del(self.online_cards[index])
-                            break
-                        else:
-                            index += 1
-
-                if len(self.online_cards) == 0:
-                    break
-
-"""
-
-
-
-"""
-elem = driver.find_element_by_id("email")
-elem.send_keys(user)
-elem = driver.find_element_by_id("pass")
-elem.send_keys(pwd)
-elem.send_keys(Keys.RETURN)
-driver.implicitly_wait(5)
-#elem = driver.find_element_by_id("u_g_2")
-#elem = driver.find_elements_by_css_selector()
-#elem.send_keys("Miha Trobec")
-
-elems = driver.find_elements_by_css_selector("input[placeholder='Iskanje']")
-
-elem = elems[1]
-driver.implicitly_wait(5)
-elem.send_keys(person)
-chatsearch = driver.find_element_by_id("chatsearch")
-chatlistbox = chatsearch.find_element_by_css_selector("ul[role='listbox']")
-chatlistbox.click()
-
-nek = driver.switch_to.active_element
-nek.send_keys(text1)
-'''
-chattextboxes = driver.find_elements_by_class_name("fbNubFlyoutFooter")
-chattextbox = chattextboxes[0].find_element_by_css_selector("br[data-text='true']")
-chattextbox.send_keys("Lego my fego ego")
-
-'''
-#chatlistbox.send_keys("testisi")
-driver.implicitly_wait(2)
-print("zdele bom poslal!!!!!!!!!!!!!!!")
-chatsend = driver.find_element_by_css_selector("a[label='send']")
-chatsend.click()
-
-
-driver.implicitly_wait(10)
-#elem.send_keys(Keys.ENTER)
-#driver.implicitly_wait(5)
-#driver.close()
-
-
-
-
-
-
-# https://selenium-python.readthedocs.io/installation.html
-"""
