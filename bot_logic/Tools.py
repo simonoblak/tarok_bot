@@ -17,7 +17,7 @@ class Tools:
         self.players = []
         self.cards = []
         self.playing_bot = self.create_bot(self.cards)
-        self.game = ""
+        self.game = 0
 
     def create_bot(self, cards):
         bot_name = config["playing_bot"]
@@ -52,9 +52,8 @@ class Tools:
             # TODO klele je treba še za igro solo brez pohendlat če bo potrebno
             index = 0
         """
-        g = 3 if self.game == "Tri" else 2 if self.game == "Dve" else 1 if self.game == "Eno" else 0
         talon = self.convert_alts_to_cards(online_talon)
-        index = self.playing_bot.choose_talon_step_1(g, talon)
+        index = self.playing_bot.choose_talon_step_1(self.game, talon)
         print("Tools.choose_talon(): Index -> " + str(index))
         return index
 
@@ -69,10 +68,8 @@ class Tools:
         else:
             return []
         """
-        # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
-        g = 3 if self.game == "Tri" else 2 if self.game == "Dve" else 1 if self.game == "Eno" else 0
-        print("G in choose_talon_step_2: " + str(g))
-        return self.playing_bot.choose_talon_step_2(g, non_disabled_card_indexes)
+        print("G in choose_talon_step_2: " + str(self.game))
+        return self.playing_bot.choose_talon_step_2(self.game, non_disabled_card_indexes)
 
     def convert_online_cards_into_bot_format(self, online_cards):
         self.playing_bot.cards = self.cards = self.convert_alts_to_cards(online_cards)
@@ -86,6 +83,9 @@ class Tools:
                 if online_card == card.alt:
                     tab.append(card)
         return tab
+
+    def get_game_number(self, number_text):
+        return 3 if number_text == "Tri" else 2 if number_text == "Dve" else 1 if number_text == "Ena" else 0
 
     def play_card(self, non_disabled_card_indexes, table):
         suit = ""

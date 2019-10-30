@@ -173,7 +173,7 @@ class Connector:
                         del(game_elements[-1])
                     else:
                         self.click_execute(highlighted_game)
-                        self.tool.game = highlighted_game.text
+                        self.tool.game = self.tool.get_game_number(highlighted_game.text)
                         break
 
                 # self.driver.implicitly_wait(5)

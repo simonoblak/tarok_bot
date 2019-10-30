@@ -130,7 +130,7 @@ class SemiBot:
             return ltih_index
         print(message + "I probably don't have any tarots left, selecting random card...")
         ran = random.sample(set(non_disabled_card_indexes), 1)[0]
-        print(message + "Selecting -> " + self.cards[ran])
+        print(message + "Selecting -> " + self.cards[ran].alt)
         return ran
 
     def check_if_has_tarot_card(self):
