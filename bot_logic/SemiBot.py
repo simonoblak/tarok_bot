@@ -1,6 +1,3 @@
-from karte import Deck
-from karte import Card
-import bot_logic.Tools
 import Configuration
 import random
 

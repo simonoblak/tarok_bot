@@ -1,7 +1,5 @@
-import time
 from karte import Deck
 import Configuration
-from players import Table
 from SeleniumComponent import Connector
 
 """
@@ -11,6 +9,8 @@ SPLOŠNI ZAPISKI
     'actionSystem.force.alt.gr'
 
 -   https://en.wikipedia.org/wiki/Tarot_card_games
+
+-   https://stackoverflow.com/questions/4010322/sort-a-list-of-class-instances-python/4010558
 """
 
 
@@ -21,10 +21,7 @@ Configuration.Configuration().read_config("resources/configuration.txt")
 Configuration.Configuration().check_config()
 config = Configuration.Configuration().get_config()
 
-# Deck.Deck().shuffle_deck(config["min_cut_shuffle"], config["max_cut_shuffle"],
-# config["min_number_of_shuffles"], config["max_number_of_shuffles"])
-
-# Creating a shuffled deck
+# Creating a deck
 Deck.Deck().create_deck(config["tarot_path"])
 deck = Deck.Deck().get_deck()
 
@@ -52,54 +49,3 @@ while True:
         valat.time_util(20, "Waiting for next game")
         valat.state = "bid"
     valat.time_util(1, "TarokBot(State) -> " + valat.state)
-
-
-
-"""
-# Creating players and table
-table = Table.Table()
-table.set_table()
-table.deal_cards()
-
-"""
-
-"""
-print("----------CARD ORDER----------")
-c = 0
-for kard in deck:
-    print(str(c) + ". " + kard.get_card_name())
-    c += 1
-print("------------------------------")
-
-
-print("----------Players Cards----------")
-
-for playa in table.players:
-    c = 0
-    print(playa.name)
-    for car in playa.cards:
-        print(str(c) + ". " + car.get_card_name())
-        c += 1
-for t in table.talon:
-    print(t.get_card_name())
-print("---------------------------------")
-
-
-print("----------Players Sorted Cards----------")
-
-for playa in table.players:
-    playa.sort_cards()
-    c = 0
-    print(playa.name)
-    for car in playa.cards:
-        print(str(c) + ". " + car.get_card_name())
-        c += 1
-for t in table.talon:
-    print(t.get_card_name())
-print("----------------------------------------")
-
-
-table.choose_game()
-table.choose_king()
-table.choose_talon()
-"""

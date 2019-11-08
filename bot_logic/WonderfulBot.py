@@ -1,6 +1,3 @@
-from karte import Deck
-from karte import Card
-import bot_logic.Tools
 import Configuration
 import random
 
@@ -23,14 +20,14 @@ class WonderfulBot:
         self.cards = cards
 
     def choose_king(self):
-
-        suits = config["suits"].split(",")
+        suits = config["suit_signs"].split(",")
         for card in self.cards:
             if card.name.lower() == "king":
-                suits.remove(card.suit)
+                suits.remove(card.alt[0])
         self.king_indexes = self.get_king_indexes()
-        random_suite = random.choice(suits)
-        return random_suite
+
+        self.playing_suite = random.choice(suits)
+        return self.playing_suite
 
     def reset_counters(self):
         self.tarot_count = 0
@@ -39,16 +36,25 @@ class WonderfulBot:
         self.ally = "stack0"
 
     def choose_talon_step_1(self, n, talon):
-        # 3 if self.game == "Tri" else 2 if self.game == "Dve" else 1 if self.game == "Eno" else 0
-        # scores = [0] * n
-        # for c in talon:
+        message = "WonderfulBot.choose_talon_step_1(): "
+        piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
+        print(message + "Piles -> " + str(piles))
+        scores = [0] * piles
+        pile_index = 0
+        n_start = 0
+        n_end = n
+        for pile_index in range(0, piles):
+            # while pile_index < piles:
+            # n_index = n_start
+            for n_index in range(n_start, n_end):
+                # while n_index < n_end:
+                scores[pile_index] += talon[n_index].points
+                # n_index += 1
+            n_start = n_end
+            n_end += n
+            # pile_index += 1
 
-        suits = config["suits"].split(",")
-        for card in self.cards:
-            if card.name.lower() == "king":
-                suits.remove(card.suit)
-
-        return 0
+        return scores.index(max(scores)) * n
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
         return random.sample(set(non_disabled_card_indexes), n)
@@ -61,7 +67,7 @@ class WonderfulBot:
         return indexes
 
     def play_card(self, non_disabled_card_indexes, table, suit):
-        message = "SemiBot.play_card(): "
+        message = "WonderfulBot.play_card(): "
         if suit == "":
             print(message + "first one, selecting random card...")
             index = random.sample(set(non_disabled_card_indexes), 1)[0]
@@ -78,7 +84,7 @@ class WonderfulBot:
 
     def play_color(self, table, suit):
         # "♥" "♦" "♠" "♣"
-        message = "SemiBot.play_color(): "
+        message = "WonderfulBot.play_color(): "
         tarot_on_desk = False
         index = -1
         max_color_on_table = 1
@@ -116,7 +122,7 @@ class WonderfulBot:
         return index
 
     def play_tarot(self, table, non_disabled_card_indexes):
-        message = "SemiBot.play_tarot(): "
+        message = "WonderfulBot.play_tarot(): "
         max_tarot_on_table = 0
         lowest_tarot_in_hand = 22
         ltih_index = 0

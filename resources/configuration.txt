@@ -5,18 +5,8 @@ user_config=resources/user_config.txt
 # yes, no
 is_pass_encoded=yes
 
-#####SHUFFLE SETTINGS
-min_cut_shuffle=2
-max_cut_shuffle=52
-min_number_of_shuffles=100
-max_number_of_shuffles=150
-
 #####TABLE SETTINGS
 player_number=4
-player_names=Simon,Lucka,Blaz,Petra
-starting_player=0
-sorted_cards=True
-obvezna3=True
 not_allowed_games=Valat,Barvni valat,Odprti berač,Berač,Solo tri,Solo dve,Solo ena,Solo brez
 # stack0 - me, stack1 - right, stack2 - up, stack3 - left
 player_positions=stack1,stack2,stack3
@@ -28,5 +18,4 @@ playing_bot=SemiBot
 opponent_bot=Vražji
 
 #####CARD SETTINGS
-suits=Hearts,Diamonds,Clubs,Spades
 suit_signs=♥,♦,♠,♣

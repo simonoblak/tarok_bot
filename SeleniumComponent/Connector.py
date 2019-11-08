@@ -16,6 +16,7 @@ config = Configuration.Configuration().get_config()
 NOTES
 https://selenium-python.readthedocs.io/installation.html
 
+https://stackoverflow.com/a/51534196/11189926
 
 https://stackoverflow.com/questions/45347675/make-selenium-wait-10-seconds
 
@@ -90,8 +91,6 @@ class Connector:
         print("Creating game: " + create_game_message)
 
         try:
-            # Leave the try catch for the other parameters for setting the game
-
             # Create new game
             self.time_util(20, "pred klikom za novo igro")
             self.driver.implicitly_wait(3)
@@ -105,7 +104,6 @@ class Connector:
 
                 self.click_execute(set_for_three_players)
 
-            # TODO set the other elements here
             self.time_util(2, "Pred ustvarjanjem igre")
 
             self.driver.implicitly_wait(3)
@@ -127,8 +125,6 @@ class Connector:
                     self.add_bots(bot, config["player_number"])
                     break
 
-            #self.state = "Game created"
-
         except NoSuchElementException:
             print("No element found in: " + create_game_message)
             raise NoSuchElementException
@@ -136,7 +132,6 @@ class Connector:
     def get_cards(self):
         get_cards_message = "Connector.get_cards()"
         print(get_cards_message + ": Getting cards...")
-        state_name = "Get Cards"
 
         alts = []
         try:
@@ -155,7 +150,6 @@ class Connector:
         choose_game_message = "Connector.choose_game()"
         print(choose_game_message + ": Choosing game")
         state_name = "bid"
-        # self.check_state(state_name)
 
         while True:
             my_turn = self.tool.is_my_turn(self.get_timers(1))
@@ -170,8 +164,6 @@ class Connector:
             not_allowed_games = config["not_allowed_games"].split(",")
 
             while True:
-                # self.driver.implicitly_wait(10)
-                # self.time_util(5, "choose_game")
                 game_elements = self.driver.find_element_by_id("bid")\
                     .find_element_by_class_name("choice")\
                     .find_elements_by_class_name("popular")
@@ -183,10 +175,8 @@ class Connector:
                     else:
                         self.click_execute(highlighted_game)
                         self.tool.set_game(highlighted_game.text)
-                        # self.tool.game = highlighted_game.text
                         break
 
-                # self.driver.implicitly_wait(5)
                 self.time_util(3, "Čakamo na izbiro drugih igralcov")
                 self.check_state(state_name)
                 if self.state == "call":
@@ -324,12 +314,10 @@ class Connector:
                                 .find_elements_by_css_selector("img")[0]\
                                 .get_attribute("alt")
                             card_counter -= 1
-                            # time.sleep(0.5)
 
                     print("####### WHOLE TABLE ############")
                     print(table)
                     print("################################")
-                    # TODO this might come in handy https://stackoverflow.com/a/51534196/11189926
 
                     # Reset the map
                     for p in player_positions:
@@ -345,7 +333,6 @@ class Connector:
             print("####### LAST CARDS FOR WHOLE TABLE ############")
             print(player_positions)
             print("###############################################")
-
 
             self.state = "end_game"
         except NoSuchElementException:

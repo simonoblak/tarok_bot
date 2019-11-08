@@ -1,5 +1,3 @@
-from karte import Deck
-from karte import Card
 import Configuration
 import random
 
