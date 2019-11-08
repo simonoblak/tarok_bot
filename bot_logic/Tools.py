@@ -38,37 +38,15 @@ class Tools:
     def choose_king(self):
         suite = self.playing_bot.choose_king()
         print("Tools.choose_king(): Suit -> " + suite)
-        return suite
+        return suite + "8"
 
     def choose_talon_step_1(self, online_talon):
-        """
-        if self.game == "Tri":
-            index = self.playing_bot.choose_talon_step_1(3, talon)
-        elif self.game == "Dve":
-            index = self.playing_bot.choose_talon_step_1(2, talon)
-        elif self.game == "Eno":
-            index = self.playing_bot.choose_talon_step_1(1, talon)
-        else:
-            # TODO klele je treba še za igro solo brez pohendlat če bo potrebno
-            index = 0
-        """
         talon = self.convert_alts_to_cards(online_talon)
         index = self.playing_bot.choose_talon_step_1(self.game, talon)
         print("Tools.choose_talon(): Index -> " + str(index))
         return index
 
     def choose_talon_step_2(self, non_disabled_card_indexes):
-        """
-        if self.game == "Tri":
-            return self.playing_bot.choose_talon_step_2(3, non_disabled_card_indexes)
-        elif self.game == "Dve":
-            return self.playing_bot.choose_talon_step_2(2, non_disabled_card_indexes)
-        elif self.game == "Eno":
-            return self.playing_bot.choose_talon_step_2(1, non_disabled_card_indexes)
-        else:
-            return []
-        """
-        print("G in choose_talon_step_2: " + str(self.game))
         return self.playing_bot.choose_talon_step_2(self.game, non_disabled_card_indexes)
 
     def convert_online_cards_into_bot_format(self, online_cards):
@@ -84,8 +62,8 @@ class Tools:
                     tab.append(card)
         return tab
 
-    def get_game_number(self, number_text):
-        return 3 if number_text == "Tri" else 2 if number_text == "Dve" else 1 if number_text == "Ena" else 0
+    def set_game(self, game_text):
+        self.game = 3 if game_text == "Tri" else 2 if game_text == "Dve" else 1 if game_text == "Ena" else 0
 
     def play_card(self, non_disabled_card_indexes, table):
         suit = ""

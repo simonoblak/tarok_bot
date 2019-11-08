@@ -1,9 +1,13 @@
 import time
 import bot_logic.Tools
 import Configuration
+import base64
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 
 config = Configuration.Configuration().get_config()
 
@@ -27,6 +31,7 @@ class Connector:
     def __init__(self, url):
         self.url = url
         self.driver = self.init_driver()
+        self.wait = WebDriverWait(self.driver, 10)
         self.is_four_players = config["player_number"] == 4
         self.player_name = ""
         self.tool = bot_logic.Tools.Tools()
@@ -72,8 +77,12 @@ class Connector:
         username_input.send_keys(user_config[0] + Keys.ENTER)
         self.driver.implicitly_wait(5)
 
+        if config["is_pass_encoded"] == "yes":
+            pw = str(base64.b64decode(user_config[1]), "utf-8")
+        else:
+            pw = user_config[1]
         pw_input = self.driver.find_element_by_css_selector("input[name='password']")
-        pw_input.send_keys(user_config[1] + Keys.ENTER)
+        pw_input.send_keys(pw + Keys.ENTER)
         self.driver.implicitly_wait(5)
 
     def create_game(self, opponent_bot):
@@ -173,7 +182,8 @@ class Connector:
                         del(game_elements[-1])
                     else:
                         self.click_execute(highlighted_game)
-                        self.tool.game = self.tool.get_game_number(highlighted_game.text)
+                        self.tool.set_game(highlighted_game.text)
+                        # self.tool.game = highlighted_game.text
                         break
 
                 # self.driver.implicitly_wait(5)
@@ -204,14 +214,9 @@ class Connector:
             self.time_util(1, "Izbiramo kralja")
             suite = self.tool.choose_king()
             try:
-                if suite == 'Clubs':
-                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♣8']"))
-                elif suite == 'Hearts':
-                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♥8']"))
-                elif suite == 'Spades':
-                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♠8']"))
-                elif suite == 'Diamonds':
-                    self.click_execute(self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='♦8']"))
+                self.click_execute(
+                    self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='" + suite + "']")
+                )
             except NoSuchElementException:
                 print("Error in: " + choose_king_message)
                 raise NoSuchElementException
@@ -275,8 +280,9 @@ class Connector:
             return
 
         try:
-            self.click_execute(self.driver.find_element_by_id("bonus")
-                               .find_element_by_css_selector("input[name='announce']"))
+            self.click_execute(
+                self.driver.find_element_by_id("bonus").find_element_by_css_selector("input[name='announce']")
+            )
         except NoSuchElementException:
             print("Error in: " + napoved_message)
             raise NoSuchElementException
@@ -289,33 +295,58 @@ class Connector:
         if not self.check_state(state_name):
             print(the_game_message + ": Ending because not in right state")
             return
-        # end = False
+
         # stack0 - me, stack1 - right, stack2 - up, stack3 - left
         player_positions = {"stack0": "", "stack1": "", "stack2": "", "stack3": ""}
+        position_names = config["player_positions"].split(",")
 
         try:
             # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
             rounds_left = 12 if self.is_four_players else 16
-            while rounds_left > 0:
+            while rounds_left > 1:
                 if self.tool.is_my_turn(self.get_timers(2)):
-                    table = self.get_cards_from_table(player_positions)
+                    table, card_counter = self.get_cards_from_table(player_positions)
                     print("############ TABLE ############")
                     print(table)
                     print("###############################")
                     self.get_cards()
                     indexes = self.get_non_disabled_card_indexes()
                     play = self.tool.play_card(indexes, table)
+
+                    table["stack0"] = self.online_cards[play].get_attribute("alt")
                     self.click_execute(self.online_cards[play])
                     rounds_left -= 1
                     print("Rounds Left: " + str(rounds_left))
 
+                    for position in position_names:
+                        if table[position] == "" and card_counter > 0 and self.element_located("#" + position + " img"):
+                            table[position] = self.driver.find_element_by_id(position)\
+                                .find_elements_by_css_selector("img")[0]\
+                                .get_attribute("alt")
+                            card_counter -= 1
+                            # time.sleep(0.5)
+
+                    print("####### WHOLE TABLE ############")
+                    print(table)
+                    print("################################")
                     # TODO this might come in handy https://stackoverflow.com/a/51534196/11189926
 
                     # Reset the map
                     for p in player_positions:
                         player_positions[p] = ""
 
-            # self.time_util(15, "Waiting for next game")
+            # Get last cards from table, valat.si automaticaly plays the last card for you so just get from table
+            for position in player_positions:
+                if player_positions[position] == "" and self.element_located("#" + position + " img"):
+                    player_positions[position] = self.driver.find_element_by_id(position) \
+                        .find_elements_by_css_selector("img")[0] \
+                        .get_attribute("alt")
+
+            print("####### LAST CARDS FOR WHOLE TABLE ############")
+            print(player_positions)
+            print("###############################################")
+
+
             self.state = "end_game"
         except NoSuchElementException:
             print("Error in: " + the_game_message)
@@ -330,33 +361,21 @@ class Connector:
             if "disabled" not in self.online_cards[i].get_attribute("class"):
                 indexes.append(i)
 
-        """
-        for i in range(0, len(self.online_cards)):
-            while True:
-                self.driver.implicitly_wait(1)
-                if "disabled" not in self.online_cards[i].get_attribute("class"):
-                    indexes.append(i)
-                
-                c = self.online_cards[i].get_attribute("class")
-                if c is not None:
-                    
-                        break
-                else:
-                    print("Something wrong, there is no class in 'Connector.get_non_disabled_card_indexes()'")
-                    self.time_util(1)
-        """
         return indexes
 
     def get_cards_from_table(self, player_positions):
         message = "Connector.get_cards_from_table(): "
-        for position in ["stack1", "stack2", "stack3"]:  # config["player_positions"].split(",")
+        positions = config["player_positions"].split(",")
+        card_counter = 0
+        for position in positions:
             elements = self.driver.find_element_by_id(position).find_elements_by_css_selector("img")
             if len(elements) > 0:
                 alt = elements[0].get_attribute("alt")
                 player_positions[position] = int(alt) if alt.isdigit() else alt
             else:
-                print(message + "player: (" + position + ") has no card")
-        return player_positions
+                card_counter += 1
+                print(message + "player: (" + position + ") has no card. Players to check later: " + str(card_counter))
+        return player_positions, card_counter
 
     def get_timers(self, between_time=5):
         get_timers_message = "Connector.get_timers()"
@@ -376,6 +395,16 @@ class Connector:
         print(get_timers_message + "'Start time: " + start + "', 'End time: " + end + "'")
         print(get_timers_message + ": End")
         return [start, end]
+
+    def element_located(self, selector):
+        message = "Connector.element_located(): "
+        try:
+            self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
+            print(message + "Element '" + selector + "' successfully located")
+            return True
+        except TimeoutException:
+            print(message + "Element '" + selector + "' not located!!!")
+            return False
 
     def time_util(self, seconds, location=""):
         for i in range(0, seconds):

@@ -9,6 +9,8 @@ SPLOŠNI ZAPISKI
 -   Ker se je v novem pycharmu pokvarila altgr tipka je potreben workaroud
     Ctrl + Shift + A -> pod 'Actions' poišči 'registry' in obkljukaj ključ
     'actionSystem.force.alt.gr'
+
+-   https://en.wikipedia.org/wiki/Tarot_card_games
 """
 
 
@@ -48,6 +50,7 @@ while True:
         valat.the_game()
     elif valat.state == "end_game":
         valat.time_util(20, "Waiting for next game")
+        valat.state = "bid"
     valat.time_util(1, "TarokBot(State) -> " + valat.state)
 
 
@@ -99,27 +102,4 @@ print("----------------------------------------")
 table.choose_game()
 table.choose_king()
 table.choose_talon()
-"""
-
-# https://en.wikipedia.org/wiki/Tarot_card_games
-
-
-
-"""
-kaj vsak bot potrebuje?
-
-podatki za vhod v pyquery komponento
-	- samo na začetku
-		- katere karte imam
-		- katero pozicijo imam pri izbiranju talona
-		- pod pogojem da sem izbran 
-			- pošljem info o izbranem kralju
-			- potrebujem info o talonu
-			- po možnosti že tam preberem katere karte si lahko založim
-		
-	- ali sem na vrsti. Lahko je to pogoj, da sploh v naprej kej računa
-	
-	- katera karta je bila v krogu prva odigrana
-	- katere karte so še bile odigrane
-	- 
 """

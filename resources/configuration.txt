@@ -2,6 +2,8 @@
 tarot_path=resources/tarot_cards.txt
 url=https://valat.si/tarok
 user_config=resources/user_config.txt
+# yes, no
+is_pass_encoded=yes
 
 #####SHUFFLE SETTINGS
 min_cut_shuffle=2
@@ -27,3 +29,4 @@ opponent_bot=Vražji
 
 #####CARD SETTINGS
 suits=Hearts,Diamonds,Clubs,Spades
+suit_signs=♥,♦,♠,♣

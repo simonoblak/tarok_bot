@@ -11,35 +11,35 @@ class RandomBot:
         # self.deck = Deck.Deck().get_deck()
         self.cards = cards
         self.king_indexes = []
+        self.playing_suite = ""
 
     def set_cards(self, cards):
         self.cards = cards
 
     def choose_king(self):
-        suits = config["suits"].split(",")
+        suits = config["suit_signs"].split(",")
         for card in self.cards:
             if card.name.lower() == "king":
-                suits.remove(card.suit)
+                suits.remove(card.alt[0])
         self.king_indexes = self.get_king_indexes()
-        random_suite = random.choice(suits)
-        return random_suite
+        self.playing_suite = random.choice(suits)
+        return self.playing_suite
 
     def choose_talon_step_1(self, n, talon):
-        suits = config["suits"].split(",")
-        for card in self.cards:
-            if card.name.lower() == "king":
-                suits.remove(card.suit)
+        for index, card in enumerate(talon):
+            if card.alt == self.playing_suite + "8":
+                return index
 
-        return 0
+        return talon.index(random.choice(talon))
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
         return random.sample(set(non_disabled_card_indexes), n)
 
     def get_king_indexes(self):
         indexes = []
-        for i in range(0, len(self.cards)):
-            if self.cards[i].name.lower() == "king":
-                indexes.append(i)
+        for index, card in enumerate(self.cards):  # range(0, len(self.cards)):
+            if card.name.lower() == "king":
+                indexes.append(index)
         return indexes
 
     def play_card(self, non_disabled_card_indexes, table, suite):

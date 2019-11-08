@@ -45,6 +45,9 @@ class Configuration:
             if game not in not_allowed_games:
                 errors.append("Not allowed games parameter has an unexpected value")
 
+        if not self.config["is_pass_encoded"] == "yes" and not self.config["is_pass_encoded"] == "no":
+            errors.append("'is_pass_encoded' can only have 'yes' or 'no' values")
+
         if len(errors) > 0:
             self.pretty_print("fix these errors")
             for e in errors:
