@@ -4,4 +4,6 @@
 <li>Run 'TarokBot.py'</li>
 <li>Make sure that the rounds are played Counter-Clockwise</li>
 <br/>
-<p>Version 0.1<br/>Random and Semi bot work</p>
+<img src="resources/TarokBot.svg" alt="shema">
+<br/>
+<p>Version 0.2<br/>Random and Semi bot work</p>
