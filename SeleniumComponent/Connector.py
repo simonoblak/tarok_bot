@@ -150,6 +150,7 @@ class Connector:
         choose_game_message = "Connector.choose_game()"
         print(choose_game_message + ": Choosing game")
         state_name = "bid"
+        self.my_bot_playing = False
 
         while True:
             my_turn = self.tool.is_my_turn(self.get_timers(1))
@@ -182,6 +183,7 @@ class Connector:
                 if self.state == "call":
                     if self.driver.find_element_by_id("call").find_element_by_css_selector("h2").text.startswith(self.player_name):
                         self.my_bot_playing = True
+                        self.tool.set_bot_game()
                     choose_over = True
 
                 if choose_over or not self.check_state(state_name):
@@ -256,6 +258,9 @@ class Connector:
                 raise NoSuchElementException
         else:
             self.time_util(1, "Izbira talona od drugega igralca")
+            if self.element_located("#talon .data img"):
+                talon = self.driver.find_element_by_id("talon").find_element_by_class_name("data") \
+                    .find_elements_by_css_selector("img")
 
     def napoved(self):
         napoved_message = "Connector.napoved()"

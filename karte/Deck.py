@@ -1,5 +1,6 @@
 from karte import Card
 import random
+import operator
 
 
 class Deck:
@@ -13,29 +14,33 @@ class Deck:
         for line in lines:
             name, points, rank, suit, deck_order = line.split(";")
             card = Card.Card(name, int(points), int(rank), suit, deck_order)
-            card.set_alt()
             Deck.deck.append(card)
         print("Created deck in: " + create_deck_message)
 
-    def shuffle_deck(self, min_limit, max_limit, min_number_of_shuffles, max_number_of_shuffles):
-        number_of_shuffles = random.randint(min_number_of_shuffles, max_number_of_shuffles)
-        for i in range(number_of_shuffles):
-            Deck.deck = self.cut_shuffle(Deck.deck, min_limit, max_limit)
-            Deck.deck = self.riffle_shuffle(Deck.deck)
-
-    def cut_shuffle(self, deck, min_limit, max_limit):
-        spot = random.randint(min_limit, max_limit)
-        return deck[spot:] + deck[:spot]
-
-    def riffle_shuffle(self, deck):
-        deck_half = int(len(deck) / 2)
-        first_half = deck[:deck_half]
-        second_half = deck[deck_half:]
-        result = []
-        for i in range(deck_half):
-            result.append(first_half[i])
-            result.append(second_half[i])
-        return result
-
     def get_deck(self):
         return self.deck
+
+    # For testing purposes
+    def get_random_12_list_and_talon(self):
+        cards = []
+        talon = []
+        card_names = []
+        m = {}
+        numbers = []
+        i = 0
+        while i < 18:
+            ran = random.randint(0, 53)
+            if ran not in numbers:
+                numbers.append(ran)
+                if i < 12:
+                    cards.append(self.deck[ran])
+                else:
+                    talon.append(self.deck[ran].get_card_name())
+                i += 1
+        cards.sort(key=operator.attrgetter('deck_order'))
+        for card in cards:
+            card_names.append(card.get_card_name())
+        m["cards"] = cards
+        m["card_names"] = card_names
+        m["talon"] = talon
+        return m

@@ -30,6 +30,9 @@ class Tools:
     def is_my_turn(self, times):
         return times[0] != times[1]
 
+    def set_bot_game(self):
+        self.playing_bot.game = self.game
+
     def choose_king(self):
         suite = self.playing_bot.choose_king()
         print("Tools.choose_king(): Suit -> " + suite)

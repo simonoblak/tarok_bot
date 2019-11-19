@@ -6,10 +6,10 @@ config = Configuration.Configuration().get_config()
 
 class SemiBot:
     def __init__(self, cards):
-        # self.deck = Deck.Deck().get_deck()
         self.cards = cards
         self.king_indexes = []
         self.playing_suite = ""
+        self.game = -1
 
     def set_cards(self, cards):
         self.cards = cards
@@ -17,11 +17,19 @@ class SemiBot:
     def choose_king(self):
         suits = config["suit_signs"].split(",")
         for card in self.cards:
-            if card.name.lower() == "king":
-                suits.remove(card.alt[0])
-        self.king_indexes = self.get_king_indexes()
+            bad_suit = ""
+            if card.rank == "8":
+                suits.remove(card.suit)
+            elif not card.is_tarot:
+                for suit in suits:
+                    if suit == card.suit:
+                        bad_suit = card.suit
+                        break
 
-        self.playing_suite = random.choice(suits)
+            if bad_suit != "":
+                suits.remove(bad_suit)
+
+        self.playing_suite = random.choice(suits) if len(suits) > 0 else random.choice(config["suit_signs"].split(","))
         return self.playing_suite
 
     def choose_talon_step_1(self, n, talon):
@@ -29,19 +37,13 @@ class SemiBot:
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
         print(message + "Piles -> " + str(piles))
         scores = [0] * piles
-        pile_index = 0
         n_start = 0
         n_end = n
         for pile_index in range(0, piles):
-            # while pile_index < piles:
-            # n_index = n_start
             for n_index in range(n_start, n_end):
-                # while n_index < n_end:
                 scores[pile_index] += talon[n_index].points
-                # n_index += 1
             n_start = n_end
             n_end += n
-            # pile_index += 1
 
         return scores.index(max(scores)) * n
 
@@ -50,19 +52,12 @@ class SemiBot:
         print(non_disabled_card_indexes)
         return random.sample(set(non_disabled_card_indexes), n)
 
-    def get_king_indexes(self):
-        indexes = []
-        for index, card in enumerate(self.cards):  # range(0, len(self.cards)):
-            if card.name.lower() == "king":
-                indexes.append(index)
-        return indexes
-
     def play_card(self, non_disabled_card_indexes, table, suit):
         message = "SemiBot.play_card(): "
         if suit == "":
             print(message + "first one, selecting random card...")
             index = random.sample(set(non_disabled_card_indexes), 1)[0]
-            print(message + " Random card -> " + self.cards[index].alt)
+            print(message + "Random card -> " + self.cards[index].alt)
             return index
 
         if suit != "tarot":
@@ -94,7 +89,7 @@ class SemiBot:
             # works only if cards are sorted
             if self.cards[i].is_tarot:
                 break
-            if self.cards[i].alt[0] == suit:
+            if self.cards[i].suit == suit:
                 if self.cards[i].rank > max_color_on_table and not tarot_on_desk:
                     print(message + "clicking card -> " + self.cards[i].alt)
                     index = i

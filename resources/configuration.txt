@@ -19,3 +19,5 @@ opponent_bot=Vražji
 
 #####CARD SETTINGS
 suit_signs=♥,♦,♠,♣
+tarot_count=22
+color_count=8

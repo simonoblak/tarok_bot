@@ -1,38 +1,108 @@
 import Configuration
 import random
+from bot_logic import SuitHelper
 
 config = Configuration.Configuration().get_config()
 
 
 class WonderfulBot:
     def __init__(self, cards):
-        # self.deck = Deck.Deck().get_deck()
         self.cards = cards
         self.king_indexes = []
         self.playing_suite = ""
-        self.tarot_count = 0
+        self.game = -1
+        self.tarot_count = 22
         # "♥" "♦" "♠" "♣"
-        self.color_count = {"♥": 0, "♦": 0, "♠": 0, "♣": 0}
+        self.color_count = {"♥": 8, "♦": 8, "♠": 8, "♣": 8}
         self.history = {}
         self.ally = "stack0"
+        self.suit_objects = {}
+        self.candidate_suits = []
 
     def set_cards(self, cards):
         self.cards = cards
 
-    def choose_king(self):
-        suits = config["suit_signs"].split(",")
+    # TODO prestavi to metodo v Tools.py in uporabi pri ostalih botih
+    def init_round(self):
+        for s in config["suit_signs"].split(","):
+            self.suit_objects[s] = SuitHelper.SuitHelper(s)
+
         for card in self.cards:
-            if card.name.lower() == "king":
-                suits.remove(card.alt[0])
-        self.king_indexes = self.get_king_indexes()
+            if card.is_tarot:
+                self.tarot_count -= 1
+            else:
+                if card.rank == 8:
+                    self.suit_objects[card.suit].has_king = True
+                self.suit_objects[card.suit].color_count -= 1
+                self.suit_objects[card.suit].color_points += card.rank
+                self.suit_objects[card.suit].card_alts.append(card.alt)
+
+    def choose_king(self):
+        self.init_round()
+
+        message = "WonderfulBot.choose_king(): "
+        suits = []
+
+        no_king_suits = config["suit_signs"].split(",")
+        suit_count = {}
+        for card in self.cards:
+            if card.is_tarot:
+                self.tarot_count -= 1
+            else:
+                suit = card.suit
+                self.color_count[suit] -= 1
+                if card.rank == 8:
+                    self.suit_objects.pop(suit)
+                    no_king_suits.remove(suit)
+                else:
+                    suit_count[suit] = 1 if suit not in suit_count else suit_count[suit] + 1
+
+        # Barv ki nimam v roki izločim iz izbire
+        for suit in suit_count:
+            if suit_count[suit] == 8:
+                suits.remove(suit)
+
+        if len(suits) == 0:
+            print(message + "No suit was good. Selecting random...")
+            if len(no_king_suits) == 0:
+                print(message + "All 4 kings are in my hand... Good Luck...")
+                suits_array = config["suit_signs"].split(",")
+            else:
+                suits_array = no_king_suits
+            self.playing_suite = random.choice(suits_array)
+            return self.playing_suite
+
+        if len(suits) == 1:
+            print(message + "Only 1 color is good. Selecting: " + suits[0])
+            self.playing_suite = suits[0]
+            return self.playing_suite
+
+        # Igra za v Ena
+        if self.game == 1:
+            # Odstranjujemo barve, ki imajo samo 1 karto.
+            max_color_value = 0
+            for c in self.color_count:
+                if self.color_count[c] == 7:
+                    pass
+
+
+        for card in self.cards:
+            if not card.is_tarot and card.suit in suits:
+                pass
+
+        for suit in suit_count:
+            if suit_count[suit] > self.game:
+                print(message + "Removing suit(" + suit + ") because suit_count '"
+                      + str(suit_count[suit]) + "' > than game '" + str(self.game) + "'")
+                suits.remove(suit)
 
         self.playing_suite = random.choice(suits)
         return self.playing_suite
 
     def reset_counters(self):
-        self.tarot_count = 0
+        self.tarot_count = 22
         for c in self.color_count:
-            self.color_count[c] = 0
+            self.color_count[c] = 8
         self.ally = "stack0"
 
     def choose_talon_step_1(self, n, talon):
@@ -40,38 +110,25 @@ class WonderfulBot:
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
         print(message + "Piles -> " + str(piles))
         scores = [0] * piles
-        pile_index = 0
         n_start = 0
         n_end = n
         for pile_index in range(0, piles):
-            # while pile_index < piles:
-            # n_index = n_start
             for n_index in range(n_start, n_end):
-                # while n_index < n_end:
                 scores[pile_index] += talon[n_index].points
-                # n_index += 1
             n_start = n_end
             n_end += n
-            # pile_index += 1
 
         return scores.index(max(scores)) * n
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
         return random.sample(set(non_disabled_card_indexes), n)
 
-    def get_king_indexes(self):
-        indexes = []
-        for i in range(0, len(self.cards)):
-            if self.cards[i].name.lower() == "king":
-                indexes.append(i)
-        return indexes
-
     def play_card(self, non_disabled_card_indexes, table, suit):
         message = "WonderfulBot.play_card(): "
         if suit == "":
             print(message + "first one, selecting random card...")
             index = random.sample(set(non_disabled_card_indexes), 1)[0]
-            print(message + " Random card -> " + self.cards[index].alt)
+            print(message + "Random card -> " + self.cards[index].alt)
             return index
 
         if suit != "tarot":
@@ -103,7 +160,7 @@ class WonderfulBot:
             # works only if cards are sorted
             if self.cards[i].is_tarot:
                 break
-            if self.cards[i].alt[0] == suit:
+            if self.cards[i].suit == suit:
                 if self.cards[i].rank > max_color_on_table and not tarot_on_desk:
                     print(message + "clicking card -> " + self.cards[i].alt)
                     index = i
