@@ -7,6 +7,6 @@ Supported browsers: Chrome
 <li>Run 'TarokBot.py'</li>
 <li>Make sure that the rounds are played Counter-Clockwise</li>
 <br/>
-<img src="resources/TarokBot.svg" alt="shema" style="display: block; margin-left: auto; margin-right: auto; width: 70%;">
+<img src="resources/TarokBot.svg" alt="schema">
 <br/>
 <p>Version 0.4<br/>Random and Semi bot work</p>

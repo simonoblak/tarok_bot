@@ -4,6 +4,14 @@ from bot_logic import SuitHelper
 
 config = Configuration.Configuration().get_config()
 
+"""
+kings
+https://snipsave.com/user/blavrhovec/snippet/r09laEtAoDu4GJHFBO/?fbclid=IwAR1q8tiih5H3l-60Um59RbU28vuM0O6ndB4PJUUn-3CfUZgG7exzCyFXseo
+
+izbira iger
+https://snipsave.com/user/blavrhovec/snippet/uMFsYBo2XehFsb5Hii/?fbclid=IwAR29y2F0B6yT44Yg0KEhT11RkIJIdtnZk1IU6bVjW81oZCN46HMH-1mQ8VU
+"""
+
 
 class WonderfulBot:
     def __init__(self, cards):
@@ -25,7 +33,10 @@ class WonderfulBot:
     # TODO prestavi to metodo v Tools.py in uporabi pri ostalih botih
     def init_round(self):
         for s in config["suit_signs"].split(","):
-            self.suit_objects[s] = SuitHelper.SuitHelper(s)
+            if len(self.suit_objects) == 0:
+                self.suit_objects[s] = SuitHelper.SuitHelper(s)
+            else:
+                self.suit_objects[s].reset_counters()
 
         for card in self.cards:
             if card.is_tarot:
@@ -41,25 +52,15 @@ class WonderfulBot:
         self.init_round()
 
         message = "WonderfulBot.choose_king(): "
-        suits = []
-
+        suits = config["suit_signs"].split(",")
         no_king_suits = config["suit_signs"].split(",")
-        suit_count = {}
-        for card in self.cards:
-            if card.is_tarot:
-                self.tarot_count -= 1
-            else:
-                suit = card.suit
-                self.color_count[suit] -= 1
-                if card.rank == 8:
-                    self.suit_objects.pop(suit)
-                    no_king_suits.remove(suit)
-                else:
-                    suit_count[suit] = 1 if suit not in suit_count else suit_count[suit] + 1
 
-        # Barv ki nimam v roki izločim iz izbire
-        for suit in suit_count:
-            if suit_count[suit] == 8:
+        # Barve, ki nimam v roki oz. imam kralja v tej barvi, izločim iz izbire
+        for suit in self.suit_objects:
+            if self.suit_objects[suit].has_king:
+                no_king_suits.remove(suit)
+                suits.remove(suit)
+            elif self.suit_objects[suit].color_count == 8:
                 suits.remove(suit)
 
         if len(suits) == 0:
@@ -70,6 +71,7 @@ class WonderfulBot:
             else:
                 suits_array = no_king_suits
             self.playing_suite = random.choice(suits_array)
+            print(message + "Randomly selected suit: " + self.playing_suite)
             return self.playing_suite
 
         if len(suits) == 1:
@@ -79,24 +81,172 @@ class WonderfulBot:
 
         # Igra za v Ena
         if self.game == 1:
-            # Odstranjujemo barve, ki imajo samo 1 karto.
+            # Odstranjujem barvo, ki imajo samo 1 karto z najvišjo vrednostjo
             max_color_value = 0
-            for c in self.color_count:
-                if self.color_count[c] == 7:
-                    pass
+            max_suit = ""
+            suits_with_3_or_less_cards = []
+            lowest_color_count = 9
+            lowest_suit = ""
+            for suit in suits:
+                if self.suit_objects[suit].color_count == 7 and self.suit_objects[suit].color_points > max_color_value:
+                    max_color_value = self.suit_objects[suit].color_points
+                    max_suit = suit
+                if self.suit_objects[suit].color_count < lowest_color_count:
+                    lowest_color_count = self.suit_objects[suit].color_count
+                    lowest_suit = suit
 
+            for suit in no_king_suits:
+                if self.suit_objects[suit].color_count > 5:
+                    print(message + "Appending suit with less than 4 cards: " + suit)
+                    suits_with_3_or_less_cards.append(suit)
 
-        for card in self.cards:
-            if not card.is_tarot and card.suit in suits:
-                pass
+            if max_suit != "":
+                print(message + "Removing suit with highest point value: " + max_suit)
+                suits.remove(max_suit)
+                if len(suits) == 1:
+                    print(message + "Only 1 color is good. Selecting: " + suits[0])
+                    self.playing_suite = suits[0]
+                    return self.playing_suite
 
-        for suit in suit_count:
-            if suit_count[suit] > self.game:
-                print(message + "Removing suit(" + suit + ") because suit_count '"
-                      + str(suit_count[suit]) + "' > than game '" + str(self.game) + "'")
-                suits.remove(suit)
+            if len(suits_with_3_or_less_cards) == 0:
+                print(message + "Selecting a suit with more than 3 cards: " + lowest_suit)
+                self.playing_suite = lowest_suit
+                return self.playing_suite
 
-        self.playing_suite = random.choice(suits)
+            print(message + "Still no king... Selecting suit with max color points")
+            max_color_points = 0
+            max_color_points_suit = ""
+            for suit in suits_with_3_or_less_cards:
+                if self.suit_objects[suit].color_points > max_color_points:
+                    max_color_points = self.suit_objects[suit].color_points
+                    max_color_points_suit = suit
+
+            print(message + "Selecting suit with max color points: " + max_color_points_suit)
+            self.playing_suite = max_color_points_suit
+            return self.playing_suite
+
+        # Igra za v Dve
+        elif self.game == 2:
+            if len(suits) == 2:
+                suit_one = self.suit_objects[suits[0]]
+                suit_two = self.suit_objects[suits[1]]
+                # can we remove one color
+                max_color_points_suit = ""
+                less_than_3 = False
+                for suit in suits:
+                    if self.suit_objects[suit].color_count >= 7:
+                        if less_than_3 and self.suit_objects[suit].color_points > self.suit_objects[max_color_points_suit].color_points:
+                            max_color_points_suit = suit
+                        else:
+                            less_than_3 = True
+                            max_color_points_suit = suit
+
+                # if removable color is found, select the other one
+                if max_color_points_suit != "":
+                    print(message + "We can store one color with 2 or less cards: " + max_color_points_suit)
+                    self.playing_suite = max_color_points_suit
+                    return self.playing_suite
+
+                # if no color can be removed, select the color with less cards
+                if suit_one.color_count != suit_two.color_count:
+                    less_cards_suit = suit_one.suit if suit_one.color_count > suit_two.color_count else suit_two.suit
+                    print(message + "minimum cards has: " + less_cards_suit)
+                    self.playing_suite = less_cards_suit
+                    return self.playing_suite
+
+                # if card number is the same check values; select the higher one
+                if suit_one.color_points != suit_two.color_points:
+                    less_points_suit = suit_one.suit if suit_one.color_points > suit_two.color_points else suit_two.suit
+                    print(message + "minimum points has: " + less_points_suit)
+                    self.playing_suite = less_points_suit
+                    return self.playing_suite
+
+                # select random
+                self.playing_suite = random.choice(suits)
+                print(message + "randomly selected: " + self.playing_suite)
+                return self.playing_suite
+
+            # more than 2 suits
+            print(message + "more than 2 suits available...")
+            one_card_suit = []
+            two_card_suit = []
+            three_card_suit = []
+            min_cards_suit = ""
+            min_cards = 0
+            for s in suits:
+                if self.suit_objects[s].color_count == 7:
+                    one_card_suit.append(s)
+                elif self.suit_objects[s].color_count == 6:
+                    two_card_suit.append(s)
+                elif self.suit_objects[s].color_count == 5:
+                    three_card_suit.append(s)
+                if self.suit_objects[s].color_count > min_cards:
+                    min_cards = self.suit_objects[s].color_count
+                    min_cards_suit = s
+
+            if len(one_card_suit + two_card_suit + three_card_suit) == 0:
+                print(message + "minimum cards has: " + min_cards_suit)
+                self.playing_suite = min_cards_suit
+                return self.playing_suite
+
+            # first check if we can remove 2 colors / if we have two colors with one card
+            if len(one_card_suit) >= 2:
+                ps = one_card_suit if len(two_card_suit + three_card_suit) == 0 else two_card_suit + three_card_suit
+                self.playing_suite = random.choice(ps)
+                print(message + "Selecting random suit that has two or three cards: " + self.playing_suite)
+                return self.playing_suite
+
+            # check if we can remove a single color
+            if len(two_card_suit) >= 1:
+                if len(one_card_suit) > 0:
+                    # there will be only one suit with one card
+                    self.playing_suite = one_card_suit[0]
+                    print(message + "Selecting suit with one ca: " + self.playing_suite)
+                    return self.playing_suite
+
+                max_color_card_suit = ""
+                max_color_card = 0
+                for s in two_card_suit:
+                    for card in self.cards:
+                        if s == card.suit and card.rank > max_color_card:
+                            max_color_card = card.rank
+                            max_color_card_suit = s
+
+                # TODO remove this if because this should produce a suit. This if statement is a failsafe
+                if max_color_card_suit != "":
+                    self.playing_suite = max_color_card_suit
+                    print(message + "Selecting suit with max card: " + self.playing_suite)
+                    return self.playing_suite
+
+                print("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
+                self.playing_suite = random.choice(two_card_suit)
+                print(message + "SOMETHING IS WRONG: " + self.playing_suite)
+                return self.playing_suite
+
+            if len(three_card_suit) >= 1:
+                max_color_card_suit = ""
+                max_color_card = 0
+                for s in three_card_suit:
+                    for card in self.cards:
+                        if s == card.suit and card.rank > max_color_card:
+                            max_color_card = card.rank
+                            max_color_card_suit = s
+
+                # TODO remove this if because this should produce a suit. This if statement is a failsafe
+                if max_color_card_suit != "":
+                    self.playing_suite = max_color_card_suit
+                    print(message + "Selecting suit with max card: " + self.playing_suite)
+                    return self.playing_suite
+
+                print("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
+                self.playing_suite = random.choice(two_card_suit)
+                print(message + "SOMETHING IS WRONG: " + self.playing_suite)
+                return self.playing_suite
+
+            # if no color can be removed ...
+
+        print(message + "This is not a 1 or 2 game. selecting a random suit with no king...")
+        self.playing_suite = random.choice(no_king_suits)
         return self.playing_suite
 
     def reset_counters(self):
