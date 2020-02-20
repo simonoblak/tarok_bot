@@ -1,6 +1,7 @@
 import Configuration
 import random
 from bot_logic import SuitHelper
+from bot_logic import TalonPileHelper
 
 config = Configuration.Configuration().get_config()
 
@@ -25,7 +26,7 @@ class WonderfulBot:
         self.history = {}
         self.ally = "stack0"
         self.suit_objects = {}
-        self.candidate_suits = []
+        self.candidates = []
 
     def set_cards(self, cards):
         self.cards = cards
@@ -42,7 +43,7 @@ class WonderfulBot:
             if card.is_tarot:
                 self.tarot_count -= 1
             else:
-                if card.rank == 8:
+                if card.is_king:
                     self.suit_objects[card.suit].has_king = True
                 self.suit_objects[card.suit].color_count -= 1
                 self.suit_objects[card.suit].color_points += card.rank
@@ -134,7 +135,7 @@ class WonderfulBot:
                 max_color_points_suit = ""
                 less_than_3 = False
                 for suit in suits:
-                    if self.suit_objects[suit].color_count >= 7:
+                    if self.suit_objects[suit].color_count >= 6:
                         if less_than_3 and self.suit_objects[suit].color_points > self.suit_objects[max_color_points_suit].color_points:
                             max_color_points_suit = suit
                         else:
@@ -143,8 +144,9 @@ class WonderfulBot:
 
                 # if removable color is found, select the other one
                 if max_color_points_suit != "":
-                    print(message + "We can store one color with 2 or less cards: " + max_color_points_suit)
-                    self.playing_suite = max_color_points_suit
+                    suits.remove(max_color_points_suit)
+                    print(message + "We can store one color with 2 or less cards: " + suits[0])
+                    self.playing_suite = suits[0]
                     return self.playing_suite
 
                 # if no color can be removed, select the color with less cards
@@ -156,9 +158,9 @@ class WonderfulBot:
 
                 # if card number is the same check values; select the higher one
                 if suit_one.color_points != suit_two.color_points:
-                    less_points_suit = suit_one.suit if suit_one.color_points > suit_two.color_points else suit_two.suit
-                    print(message + "minimum points has: " + less_points_suit)
-                    self.playing_suite = less_points_suit
+                    higher_points_suit = suit_one.suit if suit_one.color_points > suit_two.color_points else suit_two.suit
+                    print(message + "minimum points has: " + higher_points_suit)
+                    self.playing_suite = higher_points_suit
                     return self.playing_suite
 
                 # select random
@@ -191,7 +193,12 @@ class WonderfulBot:
 
             # first check if we can remove 2 colors / if we have two colors with one card
             if len(one_card_suit) >= 2:
-                ps = one_card_suit if len(two_card_suit + three_card_suit) == 0 else two_card_suit + three_card_suit
+                if len(two_card_suit + three_card_suit) == 0:
+                    ps = one_card_suit
+                else:
+                    ps = two_card_suit + three_card_suit
+                    self.candidates += one_card_suit
+
                 self.playing_suite = random.choice(ps)
                 print(message + "Selecting random suit that has two or three cards: " + self.playing_suite)
                 return self.playing_suite
@@ -223,6 +230,7 @@ class WonderfulBot:
                 print(message + "SOMETHING IS WRONG: " + self.playing_suite)
                 return self.playing_suite
 
+            # if no color can be removed ...
             if len(three_card_suit) >= 1:
                 max_color_card_suit = ""
                 max_color_card = 0
@@ -239,11 +247,9 @@ class WonderfulBot:
                     return self.playing_suite
 
                 print("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
-                self.playing_suite = random.choice(two_card_suit)
+                self.playing_suite = random.choice(three_card_suit)
                 print(message + "SOMETHING IS WRONG: " + self.playing_suite)
                 return self.playing_suite
-
-            # if no color can be removed ...
 
         print(message + "This is not a 1 or 2 game. selecting a random suit with no king...")
         self.playing_suite = random.choice(no_king_suits)
@@ -258,13 +264,115 @@ class WonderfulBot:
     def choose_talon_step_1(self, n, talon):
         message = "WonderfulBot.choose_talon_step_1(): "
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
+        pile_helpers = []
+        talon_kings = []
+        talon_tarots = []
+        """
+        1. preveri če je klicani kralj v talonu
+        2. preveri če je v kupčku kakšna barva enaka kakor klicana barva
+        3. od svojih counterjev odštevi ostale karte iz talona
+        """
+
+        has_my_color = False
+        has_my_color_index = -1
+        has_mond = False
+        has_mond_index = -1
+        has_skis = False
+        has_skis_index = -1
+        has_pagat = False
+        has_pagat_index = -1
+
+        for i, card in enumerate(talon):
+            if card.rank == 21:
+                has_mond = True
+                has_mond_index = i
+            if card.rank == 22:
+                has_skis = True
+                has_skis_index = i
+            if card.rank == 1 and card.is_tarot:
+                has_pagat = True
+                has_pagat_index = i
+            if card.is_king and card.suit == self.playing_suite:
+                has_my_color = True
+                has_my_color_index = i
+            if card.is_tarot:
+                self.tarot_count -= 1
+            else:
+                self.color_count[card.suit] -= 1
+
+        # Zbiram barvo prej kakor monda ker če z kraljem poberem dobim še XXI zraven
+        if has_my_color:
+            if has_mond and self.color_count[self.playing_suite] < 4:
+                print(message + "Selecting XXI over the King with my playing suit")
+                return has_mond_index
+
+            print(message + "Selecting King with my playing suit...")
+            return has_my_color_index
+
+        # Nekak je tole smiselno ker če se zgodi da sta XXI in SKIS v talonu potem se znebis skisa
+        if has_mond:
+            print(message + "Selecting XXI...")
+            return has_mond_index
+
+        if has_skis:
+            print(message + "Choosing pile with Skis")
+            return has_skis_index
+
+        for i, card in enumerate(talon):
+            if card.is_king:
+                talon_kings.append((card.suit, i))
+            if card.is_tarot:
+                talon_tarots.append((card.rank, i))
+
+        # TODO insert logic if talon has kings
+        if len(talon_kings) != 0:
+            if len(talon_kings) == 1:
+                print(message + "Choosing pile with the King")
+                return talon_kings[0][1]
+
+            if self.game == 2 and len(talon_kings) == 2:
+                """
+                Check if 2 kings are in the same pile... this is a hackish way because suming the indexes for game in 2
+                0 + 1 = 1; 2 + 3 = 5; 4 + 5 = 10
+                """
+                index_sum = 0
+                for king in talon_kings:
+                    index_sum += king[1]
+                if index_sum == 1 or index_sum == 5 or index_sum == 10:
+                    print(message + "Choosing pile with the 2 Kings")
+                    return talon_kings[0][1]
+
+        # Corner case: če se zgodi da ima talon 2 kralja v ločenih kupčkih v igri v 2 potem je 2/3 šanse da bo pagat z enim od kraljev
+        if has_pagat:
+            print(message + "Selecting I")
+            return has_pagat_index
+
+        if len(talon_tarots) != 0:
+            pass
+
         print(message + "Piles -> " + str(piles))
         scores = [0] * piles
         n_start = 0
         n_end = n
-        for pile_index in range(0, piles):
+        # TODO nared tko da bojo pile helperji pomagal kartam v roki, ne pa zbrat najboljši kupček
+        for pile_index in range(piles):
+            tph = TalonPileHelper.TalonPileHelper(pile_index, self.game)
+            points = 0
+            grade = 0
             for n_index in range(n_start, n_end):
-                scores[pile_index] += talon[n_index].points
+                talon_card = talon[n_index]
+                # scores[pile_index] += talon_card.points
+                points += talon_card.points
+                grade += talon_card.points / 2
+                if talon_card.is_tarot:
+                    grade += talon_card.rank / 10
+                    self.tarot_count -= 1
+                else:
+                    grade += tph.scale_grade_color[talon_card.rank]
+                    self.color_count[talon_card.suit] -= 1
+            tph.points += points
+            tph.grade += grade
+            pile_helpers.append(tph)
             n_start = n_end
             n_end += n
 

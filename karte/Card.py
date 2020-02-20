@@ -4,6 +4,7 @@ class Card:
         self.points = points
         self.rank = rank
         self.is_tarot = "tarot" == suit_name
+        self.is_king = not self.is_tarot and self.rank == 8
         self.suit_name = suit_name
         self.suit = self.set_suit()
         self.deck_order = deck_order
