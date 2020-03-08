@@ -50,7 +50,11 @@ class SemiBot:
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
         print("SemiBot.choose_talon_step_2(): " + str(n))
         print(non_disabled_card_indexes)
-        return random.sample(set(non_disabled_card_indexes), n)
+        return_cards = []
+        random_card_indexes = random.sample(set(non_disabled_card_indexes), n)
+        for i in random_card_indexes:
+            return_cards.append(self.cards[i])
+        return return_cards
 
     def play_card(self, non_disabled_card_indexes, table, suit):
         message = "SemiBot.play_card(): "
@@ -119,7 +123,7 @@ class SemiBot:
         i = 0
         while i < len(self.cards):
             # works only if cards are sorted
-            if self.cards[i].suit == "tarot":
+            if self.cards[i].is_tarot:
                 if self.cards[i].rank > max_tarot_on_table:
                     print(message + "clicking card -> " + self.cards[i].alt)
                     del (self.cards[i])

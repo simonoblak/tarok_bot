@@ -30,7 +30,11 @@ class RandomBot:
         return talon.index(random.choice(talon))
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
-        return random.sample(set(non_disabled_card_indexes), n)
+        return_cards = []
+        random_card_indexes = random.sample(set(non_disabled_card_indexes), n)
+        for i in random_card_indexes:
+            return_cards.append(self.cards[i])
+        return return_cards
 
     def play_card(self, non_disabled_card_indexes, table, suite):
         return random.sample(set(non_disabled_card_indexes), 1)[0]

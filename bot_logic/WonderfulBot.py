@@ -2,9 +2,10 @@ import Configuration
 import random
 from bot_logic import SuitHelper
 from bot_logic import TalonPileHelper
+import operator
 
 config = Configuration.Configuration().get_config()
-
+# TODO razširi bazo tako da boš vsak primer (vsak return) si zapisal kolikokrat se je zgodil. npr. z številkami označi in s komentarjem zapiši še kej
 """
 kings
 https://snipsave.com/user/blavrhovec/snippet/r09laEtAoDu4GJHFBO/?fbclid=IwAR1q8tiih5H3l-60Um59RbU28vuM0O6ndB4PJUUn-3CfUZgG7exzCyFXseo
@@ -22,7 +23,7 @@ class WonderfulBot:
         self.game = -1
         self.tarot_count = 22
         # "♥" "♦" "♠" "♣"
-        self.color_count = {"♥": 8, "♦": 8, "♠": 8, "♣": 8}
+        # self.color_count = {"♥": 8, "♦": 8, "♠": 8, "♣": 8}
         self.history = {}
         self.ally = "stack0"
         self.suit_objects = {}
@@ -33,8 +34,10 @@ class WonderfulBot:
 
     # TODO prestavi to metodo v Tools.py in uporabi pri ostalih botih
     def init_round(self):
+        self.ally = "stack0"
         for s in config["suit_signs"].split(","):
-            if len(self.suit_objects) == 0:
+            #if len(self.suit_objects) == 0:
+            if s not in self.suit_objects:
                 self.suit_objects[s] = SuitHelper.SuitHelper(s)
             else:
                 self.suit_objects[s].reset_counters()
@@ -45,7 +48,7 @@ class WonderfulBot:
             else:
                 if card.is_king:
                     self.suit_objects[card.suit].has_king = True
-                self.suit_objects[card.suit].color_count -= 1
+                self.suit_objects[card.suit].subtract_color()
                 self.suit_objects[card.suit].color_points += card.rank
                 self.suit_objects[card.suit].card_alts.append(card.alt)
 
@@ -255,12 +258,6 @@ class WonderfulBot:
         self.playing_suite = random.choice(no_king_suits)
         return self.playing_suite
 
-    def reset_counters(self):
-        self.tarot_count = 22
-        for c in self.color_count:
-            self.color_count[c] = 8
-        self.ally = "stack0"
-
     def choose_talon_step_1(self, n, talon):
         message = "WonderfulBot.choose_talon_step_1(): "
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
@@ -283,12 +280,15 @@ class WonderfulBot:
         has_pagat_index = -1
 
         for i, card in enumerate(talon):
+            # XXI mond
             if card.rank == 21:
                 has_mond = True
                 has_mond_index = i
+            # Skis
             if card.rank == 22:
                 has_skis = True
                 has_skis_index = i
+            # I palcka
             if card.rank == 1 and card.is_tarot:
                 has_pagat = True
                 has_pagat_index = i
@@ -298,11 +298,12 @@ class WonderfulBot:
             if card.is_tarot:
                 self.tarot_count -= 1
             else:
-                self.color_count[card.suit] -= 1
+                self.suit_objects[card.suit].subtract_color()
+                # self.color_count[card.suit] -= 1
 
         # Zbiram barvo prej kakor monda ker če z kraljem poberem dobim še XXI zraven
         if has_my_color:
-            if has_mond and self.color_count[self.playing_suite] < 4:
+            if has_mond and self.suit_objects[self.playing_suite].color_count < 4:  # self.color_count[self.playing_suite] < 4:
                 print(message + "Selecting XXI over the King with my playing suit")
                 return has_mond_index
 
@@ -351,7 +352,6 @@ class WonderfulBot:
             pass
 
         print(message + "Piles -> " + str(piles))
-        scores = [0] * piles
         n_start = 0
         n_end = n
         # TODO nared tko da bojo pile helperji pomagal kartam v roki, ne pa zbrat najboljši kupček
@@ -369,17 +369,183 @@ class WonderfulBot:
                     self.tarot_count -= 1
                 else:
                     grade += tph.scale_grade_color[talon_card.rank]
-                    self.color_count[talon_card.suit] -= 1
+                    self.suit_objects[talon_card.suit].color_count -= 1
+                    # self.color_count[talon_card.suit] -= 1
             tph.points += points
             tph.grade += grade
             pile_helpers.append(tph)
             n_start = n_end
             n_end += n
+        # 0 -> 0; 1 -> 2; 2 -> 4
+        # max_grade = (ocena, id oz. index)
+        max_grade = (0, 0)
+        for ph in pile_helpers:
+            if max_grade[0] < ph.grade:
+                max_grade = (ph.grade, ph.id)
 
-        return scores.index(max(scores)) * n
+        # TODO fix this logic
+        if self.game == 2:
+            # This returns the first card of the pile
+            return max_grade[1] * 2
+        if self.game == 1:
+            return max_grade[1]
+        else:
+            return max_grade[1]
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
-        return random.sample(set(non_disabled_card_indexes), n)
+        message = "WonderfulBot.choose_talon_step_2(): "
+        suits = config["suit_signs"].split(",")
+        tarot_count = 0
+        suit_counter = {}
+        cards_to_put_down = []
+        potential_cards = []
+
+        for suit in suits:
+            suit_counter[suit] = SuitHelper.SuitHelper(suit)
+
+        one_card_suits = []
+        two_card_suits = []
+        other_suits = []
+
+        # preštejem barve
+        for card in self.cards:
+            if card.is_tarot:
+                tarot_count += 1
+            else:
+                if card.is_king:
+                    suit_counter[card.suit].has_king = True
+                suit_counter[card.suit].subtract_color()
+
+        # TODO neki nared s tem
+        # če si bom mogu taroke zalagat
+        if tarot_count + self.game >= len(self.cards):
+            pass
+
+        # Zadnji if stavek je zato da ne vključujemo suitov katerih sploh nimamo v roki
+        for suit in suit_counter:
+            if suit_counter[suit].color_count == 7:
+                one_card_suits.append(suit)
+            elif suit_counter[suit].color_count == 6:
+                two_card_suits.append(suit)
+            elif suit_counter[suit].color_count <= 5:
+                other_suits.append(suit)
+
+        if len(one_card_suits) > 0:
+            print(message + "Suits with 1 card...")
+            print(one_card_suits)
+            if self.game == 1:
+                if len(one_card_suits) == 1:
+                    if not suit_counter[one_card_suits[0]].has_king and not self.playing_suite == one_card_suits[0]:
+                        return self.get_cards_from_suit(one_card_suits[0])
+                else:
+                    max_card_rank = 0
+                    max_card = None
+                    for suit in one_card_suits:
+                        suited_cards = self.get_cards_from_suit(suit)
+                        for c in suited_cards:
+                            if c.rank > max_card_rank and not c.suit == self.playing_suite and not suit_counter[c.suit].has_king:
+                                max_card_rank = c.rank
+                                max_card = c
+
+                    return [max_card]
+            if self.game == 2:
+                if len(one_card_suits) == 1:
+                    if not suit_counter[one_card_suits[0]].has_king and not self.playing_suite == one_card_suits[0]:
+                        cards_to_put_down.append(self.get_cards_from_suit(one_card_suits[0]))
+                else:
+                    game_2_suits_with_1_card = []
+                    for s in one_card_suits:
+                        if not suit_counter[s].has_king and not self.playing_suite == s:
+                            game_2_suits_with_1_card += self.get_cards_from_suit(s)
+
+                    # TODO raj posortiri po temu kok kart je še ostal oz. vzem v premislek...
+                    if len(game_2_suits_with_1_card) > 1:
+                        game_2_suits_with_1_card.sort(key=operator.attrgetter('rank'), reverse=True)
+
+                        # Prevermo če so 3je suiti z 1 karto kjer sta druga in tretja karta po ranku enaka
+                        if len(game_2_suits_with_1_card) > 2 and \
+                                game_2_suits_with_1_card[1].rank == game_2_suits_with_1_card[2].rank and \
+                                self.suit_objects[game_2_suits_with_1_card[1].suit] < self.suit_objects[game_2_suits_with_1_card[2].suit]:
+
+                            return [game_2_suits_with_1_card[0], game_2_suits_with_1_card[2]]
+
+                        return game_2_suits_with_1_card[:2]
+
+                    # Doda eno ali nobene karte za založit
+                    cards_to_put_down += game_2_suits_with_1_card
+
+        if len(two_card_suits) > 0:
+            print(message + "Suits with 2 cards...")
+            print(two_card_suits)
+            if self.game == 1:
+                if self.playing_suite in two_card_suits:
+                    ps_list = self.get_cards_from_suit(self.playing_suite)
+                    if not ps_list[0].is_king:
+                        return [ps_list[0]]
+                    return [ps_list[1]]
+
+                # Najprej poiščemo suit, ki se je najmanjkrat pojavil v talonu in v roki.
+                suit_with_min_cards = max(suit_counter, key=suit_counter.get)
+                swmc_list = self.get_cards_from_suit(suit_with_min_cards)
+
+                # Vrnemo karto, ki ima največ točk in ki ni kralj.
+                for c in swmc_list:
+                    if not c.is_king:
+                        return [c]
+
+            if self.game == 2:
+                if len(two_card_suits) == 1:
+                    s = two_card_suits[0]
+                    two_card_suit_list = self.get_cards_from_suit(s)
+                    if not suit_counter[s].has_king:
+                        if suit_counter[s].color_count > 3:
+                            return two_card_suit_list
+                        potential_cards += two_card_suit_list
+                    potential_cards.append(two_card_suit_list[1])
+                else:
+                    suit_points = {}
+                    for s in two_card_suits:
+                        tcsc_list = self.get_cards_from_suit(s)
+                        if not suit_counter[s].has_king:
+                            if suit_counter[s].color_count > 3:
+                                points = 0
+                                for c in tcsc_list:
+                                    points += c.points
+                                suit_points[s] = points
+                            else:
+                                potential_cards += tcsc_list
+                        else:
+                            potential_cards.append(tcsc_list[1])
+                    if len(suit_points) != 0:
+                        max_points_suit = max(suit_points, key=suit_points.get)
+                        print(message + "Suit with max points is: " + max_points_suit)
+                        return self.get_cards_from_suit(max_points_suit)
+
+        if len(potential_cards + cards_to_put_down) > 0:
+            pass
+        else:
+            print(message + "No suits with 1 or 2 cards. Choosing cards with max points.")
+            sorted_cards = self.cards
+            sorted_cards.sort(key=operator.attrgetter('rank'), reverse=True)
+            for c in sorted_cards:
+                if len(cards_to_put_down) >= self.game:
+                    break
+                if not c.is_tarot and not c.is_king:
+                    cards_to_put_down.append(c)
+
+        return cards_to_put_down
+
+    def get_cards_from_suit(self, suit):
+        """
+        :param suit: ♥,♦,♠,♣
+        :return: List of Card objects reverse sorted by rank.
+        """
+        suited_cards = []
+        for card in self.cards:
+            if card.suit == suit:
+                suited_cards.append(card)
+        suited_cards.sort(key=operator.attrgetter('rank'), reverse=True)
+        return suited_cards
 
     def play_card(self, non_disabled_card_indexes, table, suit):
         message = "WonderfulBot.play_card(): "
@@ -448,7 +614,7 @@ class WonderfulBot:
         i = 0
         while i < len(self.cards):
             # works only if cards are sorted
-            if self.cards[i].suit == "tarot":
+            if self.cards[i].is_tarot:
                 if self.cards[i].rank > max_tarot_on_table:
                     print(message + "clicking card -> " + self.cards[i].alt)
                     del (self.cards[i])

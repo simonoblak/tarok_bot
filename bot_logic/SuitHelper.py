@@ -11,3 +11,6 @@ class SuitHelper:
         self.color_points = 0
         self.card_alts = []
         self.has_king = False
+
+    def subtract_color(self):
+        self.color_count -= 1

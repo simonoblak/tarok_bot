@@ -45,7 +45,14 @@ class Tools:
         return index
 
     def choose_talon_step_2(self, non_disabled_card_indexes):
-        return self.playing_bot.choose_talon_step_2(self.game, non_disabled_card_indexes)
+        returned_cards = self.playing_bot.choose_talon_step_2(self.game, non_disabled_card_indexes)
+        indexes = []
+        for returned_card in returned_cards:
+            for i, card in enumerate(self.cards):
+                if returned_card.alt == card.alt:
+                    indexes.append(i)
+
+        return sorted(indexes, reverse=True)
 
     def convert_online_cards_into_bot_format(self, online_cards):
         self.playing_bot.cards = self.cards = self.convert_alts_to_cards(online_cards)
@@ -70,16 +77,6 @@ class Tools:
                 suit = self.get_suit(table[player])
                 break
 
-        """
-        if table["stack1"] != "":
-            suit = self.get_suit(table["stack1"])
-        elif table["stack2"] != "":
-            suit = self.get_suit(table["stack2"])
-        elif table["stack3"] != "":
-            suit = self.get_suit(table["stack3"])
-        else:
-            suit = ""
-        """
         return self.playing_bot.play_card(non_disabled_card_indexes, table, suit)
 
     def get_suit(self, alt):
