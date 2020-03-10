@@ -28,6 +28,7 @@ class WonderfulBot:
         self.ally = "stack0"
         self.suit_objects = {}
         self.candidates = []
+        self.number_of_rounds = 12 if config["player_number"] == 4 else 16 if config["player_number"] == 3 else 0
 
     def set_cards(self, cards):
         self.cards = cards
@@ -348,6 +349,7 @@ class WonderfulBot:
             print(message + "Selecting I")
             return has_pagat_index
 
+        # TODO fix this
         if len(talon_tarots) != 0:
             pass
 
@@ -366,11 +368,8 @@ class WonderfulBot:
                 grade += talon_card.points / 2
                 if talon_card.is_tarot:
                     grade += talon_card.rank / 10
-                    self.tarot_count -= 1
                 else:
                     grade += tph.scale_grade_color[talon_card.rank]
-                    self.suit_objects[talon_card.suit].color_count -= 1
-                    # self.color_count[talon_card.suit] -= 1
             tph.points += points
             tph.grade += grade
             pile_helpers.append(tph)
@@ -418,8 +417,24 @@ class WonderfulBot:
 
         # TODO neki nared s tem
         # če si bom mogu taroke zalagat
-        if tarot_count + self.game >= len(self.cards):
-            pass
+        if tarot_count >= self.number_of_rounds:
+            """
+            # in case the 'non_disabled_card_indexes' variable will be removed
+            sorted_cards = self.cards
+            sorted_cards.sort(key=operator.attrgetter('deck_order'))
+            for c in sorted_cards:
+                if len(cards_to_put_down) >= self.game:
+                    break
+                # Deck order 33 je tarok I
+                if not c.is_king and c.deck_order != 33:
+                    cards_to_put_down.append(c)
+            return cards_to_put_down
+            """
+            for i in non_disabled_card_indexes:
+                if len(cards_to_put_down) >= self.game:
+                    break
+                cards_to_put_down.append(self.cards[i])
+            return cards_to_put_down
 
         # Zadnji if stavek je zato da ne vključujemo suitov katerih sploh nimamo v roki
         for suit in suit_counter:
@@ -521,17 +536,23 @@ class WonderfulBot:
                         print(message + "Suit with max points is: " + max_points_suit)
                         return self.get_cards_from_suit(max_points_suit)
 
-        if len(potential_cards + cards_to_put_down) > 0:
-            pass
-        else:
-            print(message + "No suits with 1 or 2 cards. Choosing cards with max points.")
-            sorted_cards = self.cards
-            sorted_cards.sort(key=operator.attrgetter('rank'), reverse=True)
-            for c in sorted_cards:
+        if len(potential_cards) > 0:
+            potential_cards.sort(key=operator.attrgetter('rank'), reverse=True)
+            for c in potential_cards:
                 if len(cards_to_put_down) >= self.game:
-                    break
-                if not c.is_tarot and not c.is_king:
-                    cards_to_put_down.append(c)
+                    print(message + "Enough cards were already selected for this game.")
+                    return cards_to_put_down
+                cards_to_put_down.append(c)
+
+        print(message + "No suits with 1 or 2 cards. Choosing cards with max points.")
+        sorted_cards = self.cards
+        sorted_cards.sort(key=operator.attrgetter('rank'), reverse=True)
+        for c in sorted_cards:
+            if len(cards_to_put_down) >= self.game:
+                break
+            # Zadnji pogoj je zato, da nebi podvajali iste karte
+            if not c.is_tarot and not c.is_king and c not in potential_cards:
+                cards_to_put_down.append(c)
 
         return cards_to_put_down
 
@@ -550,7 +571,19 @@ class WonderfulBot:
     def play_card(self, non_disabled_card_indexes, table, suit):
         message = "WonderfulBot.play_card(): "
         if suit == "":
-            print(message + "first one, selecting random card...")
+            # TODO klele poprav da nebo random prve karte metal,
+            #  mogoče mal barve preštudiri al pa če se že splača tarokirat
+            print(message + "first one, selecting card...")
+
+            # Check if i have a king that it's suit has not been played yet
+            #   if not then play king
+            #   if yes then play tarot or low color that has allready been played
+            possible_king = "8"
+            for so in self.suit_objects:
+                sh = self.suit_objects[so]
+                if sh.has_king and not sh.was_already_played:
+                    pass
+
             index = random.sample(set(non_disabled_card_indexes), 1)[0]
             print(message + "Random card -> " + self.cards[index].alt)
             return index
@@ -638,3 +671,5 @@ class WonderfulBot:
             if card.is_tarot:
                 return True
         return False
+
+    #def get_index_from_alt

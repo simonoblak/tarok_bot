@@ -92,7 +92,7 @@ class Connector:
 
         try:
             # Create new game
-            self.time_util(20, "pred klikom za novo igro")
+            self.time_util(30, "pred klikom za novo igro")
             self.driver.implicitly_wait(3)
             create_new_game = self.driver.find_element_by_id("new")
             self.click_execute(create_new_game)

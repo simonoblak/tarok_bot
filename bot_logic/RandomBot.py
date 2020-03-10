@@ -17,7 +17,7 @@ class RandomBot:
     def choose_king(self):
         suits = config["suit_signs"].split(",")
         for card in self.cards:
-            if card.rank == "8":
+            if card.is_king:
                 suits.remove(card.suit)
         self.playing_suite = random.choice(suits)
         return self.playing_suite

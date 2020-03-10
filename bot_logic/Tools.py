@@ -41,17 +41,19 @@ class Tools:
     def choose_talon_step_1(self, online_talon):
         talon = self.convert_alts_to_cards(online_talon)
         index = self.playing_bot.choose_talon_step_1(self.game, talon)
-        print("Tools.choose_talon(): Index -> " + str(index))
+        print("Tools.choose_talon_step_1(): Index -> " + str(index))
         return index
 
     def choose_talon_step_2(self, non_disabled_card_indexes):
         returned_cards = self.playing_bot.choose_talon_step_2(self.game, non_disabled_card_indexes)
+        alts_string = ""
         indexes = []
         for returned_card in returned_cards:
+            alts_string += returned_card.alt + ", "
             for i, card in enumerate(self.cards):
                 if returned_card.alt == card.alt:
                     indexes.append(i)
-
+        print("Tools.choose_talon_step_2(): Alts -> " + alts_string)
         return sorted(indexes, reverse=True)
 
     def convert_online_cards_into_bot_format(self, online_cards):
@@ -71,13 +73,18 @@ class Tools:
         self.game = 3 if game_text == "Tri" else 2 if game_text == "Dve" else 1 if game_text == "Ena" else 0
 
     def play_card(self, non_disabled_card_indexes, table):
+        message = "Tools.play_card(): "
         suit = ""
         for player in config["player_positions"].split(","):
             if table[player] != "":
                 suit = self.get_suit(table[player])
                 break
 
-        return self.playing_bot.play_card(non_disabled_card_indexes, table, suit)
+        card = self.playing_bot.play_card(non_disabled_card_indexes, table, suit)
+        for i in range(len(self.cards)):
+            if self.cards[i].alt == card.alt:
+                return i
+        print(message + "Something is WRONG!!!!!!!!!!!!!!!")
 
     def get_suit(self, alt):
         return "tarot" if isinstance(alt, int) else alt[0]
