@@ -23,7 +23,6 @@ config = Configuration.Configuration().get_config()
 
 # Creating a deck
 Deck.Deck().create_deck(config["tarot_path"])
-deck = Deck.Deck().get_deck()
 
 url = config["url"]
 

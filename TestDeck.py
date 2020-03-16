@@ -1,6 +1,5 @@
 from karte import Deck
 import Configuration
-import TerminalColors
 
 Configuration.Configuration().read_config("resources/configuration.txt")
 Configuration.Configuration().check_config()
@@ -21,5 +20,3 @@ def do_process():
     print("\nTalon")
     for index, name in enumerate(m["talon"]):
         print(str(index + 1) + ". " + name)
-
-print(TerminalColors.TerminalColors.WARNING + "Warning: No active frommets remain. Continue?" + TerminalColors.TerminalColors.ENDC)

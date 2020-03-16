@@ -8,9 +8,9 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from Logs import Logs
 
 config = Configuration.Configuration().get_config()
-
 
 """
 NOTES
@@ -39,10 +39,11 @@ class Connector:
         self.my_bot_playing = False
         self.state = "bid"
         self.online_cards = []
+        Logs.init_logs()
 
     def init_driver(self):
         init_driver_message = "Connector.init_driver()"
-        print("Initialising driver for '" + self.url + "': " + init_driver_message)
+        Logs.info_message("Initialising driver for '" + self.url + "': " + init_driver_message)
         # Disabling notifications from web pages
         options_for_chrome = webdriver.ChromeOptions()
         options_for_chrome.add_argument("--disable-notifications")
@@ -52,11 +53,11 @@ class Connector:
         web_driver.maximize_window()
         web_driver.get(self.url)
         web_driver.implicitly_wait(5)
-        print("Finished: " + init_driver_message)
+        Logs.info_message("Finished: " + init_driver_message)
         return web_driver
 
     def click_execute(self, element):
-        print("Connector.click_execute: " + element.text)
+        Logs.debug_message("Connector.click_execute: " + element.text)
         self.driver.execute_script("arguments[0].click();", element)
 
     def add_bots(self, bot, number_of_players):
@@ -88,11 +89,11 @@ class Connector:
 
     def create_game(self, opponent_bot):
         create_game_message = "Connector.create_game()"
-        print("Creating game: " + create_game_message)
+        Logs.info_message("Creating game: " + create_game_message)
 
         try:
             # Create new game
-            self.time_util(30, "pred klikom za novo igro")
+            self.time_util(20, "pred klikom za novo igro")
             self.driver.implicitly_wait(3)
             create_new_game = self.driver.find_element_by_id("new")
             self.click_execute(create_new_game)
@@ -126,12 +127,12 @@ class Connector:
                     break
 
         except NoSuchElementException:
-            print("No element found in: " + create_game_message)
+            Logs.error_message("No element found in: " + create_game_message)
             raise NoSuchElementException
 
     def get_cards(self):
-        get_cards_message = "Connector.get_cards()"
-        print(get_cards_message + ": Getting cards...")
+        get_cards_message = "Connector.get_cards(): "
+        Logs.debug_message(get_cards_message + "Getting cards...")
 
         alts = []
         try:
@@ -139,26 +140,27 @@ class Connector:
             for online_card in self.online_cards:
                 alt = online_card.get_attribute("alt")
                 alts.append(alt)
-                print(get_cards_message + ": Added -> " + alt)
+                Logs.debug_message(get_cards_message + "Added -> " + alt)
         except NoSuchElementException:
-            print("No element found in: " + get_cards_message)
+            Logs.error_message("No element found in: " + get_cards_message)
             raise NoSuchElementException
 
         self.tool.convert_online_cards_into_bot_format(alts)
 
     def choose_game(self):
-        choose_game_message = "Connector.choose_game()"
-        print(choose_game_message + ": Choosing game")
+        choose_game_message = "Connector.choose_game(): "
+        Logs.debug_message(choose_game_message + "Choosing game")
         state_name = "bid"
         self.my_bot_playing = False
+        self.tool.init_round()
 
         while True:
             my_turn = self.tool.is_my_turn(self.get_timers(1))
-            print(choose_game_message + ": tool.is_my_turn -> " + str(my_turn))
+            Logs.debug_message(choose_game_message + "tool.is_my_turn -> " + str(my_turn))
             if my_turn:
                 break
             else:
-                time.sleep(1)
+                self.time_util(1, choose_game_message)
 
         choose_over = False
         try:
@@ -184,22 +186,23 @@ class Connector:
                     if self.driver.find_element_by_id("call").find_element_by_css_selector("h2").text.startswith(self.player_name):
                         self.my_bot_playing = True
                         self.tool.set_bot_game()
+                        Logs.info_message(choose_game_message + "I'm playing game -> " + str(self.tool.game))
                     choose_over = True
 
                 if choose_over or not self.check_state(state_name):
                     break
 
         except NoSuchElementException:
-            print("No game was found in " + choose_game_message)
+            Logs.error_message("No game was found in " + choose_game_message)
             raise NoSuchElementException
 
     def choose_king(self):
-        choose_king_message = "Connector.choose_king()"
-        print(choose_king_message + ": Choosing King")
+        choose_king_message = "Connector.choose_king(): "
+        Logs.debug_message(choose_king_message + "Choosing King")
         state_name = "call"
 
         if not self.check_state(state_name):
-            print(choose_king_message + ": Ending because not in right state")
+            Logs.info_message(choose_king_message + "Ending because not in right state")
             return
 
         if self.my_bot_playing:
@@ -210,18 +213,18 @@ class Connector:
                     self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='" + suite + "']")
                 )
             except NoSuchElementException:
-                print("Error in: " + choose_king_message)
+                Logs.error_message("Error in: " + choose_king_message)
                 raise NoSuchElementException
         else:
             self.time_util(1, "Čakamo da drug igralec izbere kralja")
 
     def choose_talon(self):
-        choose_talon_message = "Connector.choose_talon()"
-        print(choose_talon_message + ": Choosing talon")
+        choose_talon_message = "Connector.choose_talon(): "
+        Logs.debug_message(choose_talon_message + "Choosing talon")
         state_name = "talon"
 
         if not self.check_state(state_name):
-            print(choose_talon_message + ": Ending because not in right state")
+            Logs.info_message(choose_talon_message + "Ending because not in right state")
             return
 
         talon_online_cards = []
@@ -231,9 +234,9 @@ class Connector:
                 # Step 1 - izbira talona
                 talon_cards = self.driver.find_element_by_id("talon").find_element_by_class_name("data")\
                     .find_elements_by_css_selector("img")
-                print(choose_talon_message + ": po vrsti karte iz talona")
+                Logs.debug_message(choose_talon_message + "po vrsti karte iz talona")
                 for talon_card in talon_cards:
-                    print(talon_card.get_attribute("alt"))
+                    Logs.debug_message(talon_card.get_attribute("alt"))
                     talon_online_cards.append(talon_card.get_attribute("alt"))
                 talon_index = self.tool.choose_talon_step_1(talon_online_cards)
                 self.click_execute(talon_cards[talon_index])
@@ -242,19 +245,19 @@ class Connector:
                 self.time_util(1)
                 self.get_cards()
                 non_disabled_card_indexes = self.get_non_disabled_card_indexes()
-                print("$$$$$$$$$$ Non disabled card indexes $$$$$$$$$$$$")
-                print(non_disabled_card_indexes)
+                Logs.debug_message("$$$$$$$$$$ Non disabled card indexes $$$$$$$$$$$$")
+                Logs.debug_message(non_disabled_card_indexes)
                 disposed_cards_index = self.tool.choose_talon_step_2(non_disabled_card_indexes)
-                print("$$$$$$$$$$ disposed_cards_index $$$$$$$$$$$$")
-                print(disposed_cards_index)
-                print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+                Logs.debug_message("$$$$$$$$$$ disposed_cards_index $$$$$$$$$$$$")
+                Logs.debug_message(disposed_cards_index)
+                Logs.debug_message("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
                 for card_index in disposed_cards_index:
-                    print(choose_talon_message + ": Card put down -> " +
-                          self.online_cards[card_index].get_attribute("alt"))
+                    Logs.info_message(choose_talon_message + "Card put down -> " +
+                                      self.online_cards[card_index].get_attribute("alt"))
                     self.click_execute(self.online_cards[card_index])
                     self.time_util(1, "Waiting for another card to put down...")
             except NoSuchElementException:
-                print("Error in: " + choose_talon_message)
+                Logs.error_message("Error in: " + choose_talon_message)
                 raise NoSuchElementException
         else:
             self.time_util(1, "Izbira talona od drugega igralca")
@@ -263,12 +266,12 @@ class Connector:
                     .find_elements_by_css_selector("img")
 
     def napoved(self):
-        napoved_message = "Connector.napoved()"
-        print(napoved_message + ": Napoved naprej")
+        napoved_message = "Connector.napoved(): "
+        Logs.debug_message(napoved_message + ": Napoved naprej")
         state_name = "bonus"
 
         if not self.check_state(state_name):
-            print(napoved_message + ": Ending because not in right state")
+            Logs.info_message(napoved_message + ": Ending because not in right state")
             return
 
         if not self.tool.is_my_turn(self.get_timers(1)):
@@ -279,16 +282,16 @@ class Connector:
                 self.driver.find_element_by_id("bonus").find_element_by_css_selector("input[name='announce']")
             )
         except NoSuchElementException:
-            print("Error in: " + napoved_message)
+            Logs.error_message("Error in: " + napoved_message)
             raise NoSuchElementException
 
     def the_game(self):
         the_game_message = "Connector.the_game()"
-        print(the_game_message + ": Starting game")
+        Logs.debug_message(the_game_message + ": Starting game")
         state_name = "game"
 
         if not self.check_state(state_name):
-            print(the_game_message + ": Ending because not in right state")
+            Logs.info_message(the_game_message + ": Ending because not in right state")
             return
 
         # stack0 - me, stack1 - right, stack2 - up, stack3 - left
@@ -301,9 +304,9 @@ class Connector:
             while rounds_left > 1:
                 if self.tool.is_my_turn(self.get_timers(2)):
                     table, card_counter = self.get_cards_from_table(player_positions)
-                    print("############ TABLE ############")
-                    print(table)
-                    print("###############################")
+                    Logs.debug_message("############ TABLE ############")
+                    Logs.debug_message(table)
+                    Logs.debug_message("###############################")
                     self.get_cards()
                     indexes = self.get_non_disabled_card_indexes()
                     play = self.tool.play_card(indexes, table)
@@ -311,7 +314,7 @@ class Connector:
                     table["stack0"] = self.online_cards[play].get_attribute("alt")
                     self.click_execute(self.online_cards[play])
                     rounds_left -= 1
-                    print("Rounds Left: " + str(rounds_left))
+                    Logs.info_message("Rounds Left: " + str(rounds_left))
 
                     for position in position_names:
                         if table[position] == "" and card_counter > 0 and self.element_located("#" + position + " img"):
@@ -320,9 +323,9 @@ class Connector:
                                 .get_attribute("alt")
                             card_counter -= 1
 
-                    print("####### WHOLE TABLE ############")
-                    print(table)
-                    print("################################")
+                    Logs.debug_message("####### WHOLE TABLE ############")
+                    Logs.debug_message(table)
+                    Logs.debug_message("################################")
 
                     # Reset the map
                     for p in player_positions:
@@ -335,21 +338,21 @@ class Connector:
                         .find_elements_by_css_selector("img")[0] \
                         .get_attribute("alt")
 
-            print("####### LAST CARDS FOR WHOLE TABLE ############")
-            print(player_positions)
-            print("###############################################")
+            Logs.debug_message("####### LAST CARDS FOR WHOLE TABLE ############")
+            Logs.debug_message(player_positions)
+            Logs.debug_message("###############################################")
 
             self.state = "end_game"
         except NoSuchElementException:
-            print("Error in: " + the_game_message)
+            Logs.error_message("Error in: " + the_game_message)
             raise NoSuchElementException
 
     def get_non_disabled_card_indexes(self):
         indexes = []
         for i in range(0, len(self.online_cards)):
             self.driver.implicitly_wait(1)
-            print(self.online_cards[i].get_attribute("alt"))
-            print(self.online_cards[i].get_attribute("class"))
+            Logs.debug_message(self.online_cards[i].get_attribute("alt"))
+            Logs.debug_message(self.online_cards[i].get_attribute("class"))
             if "disabled" not in self.online_cards[i].get_attribute("class"):
                 indexes.append(i)
 
@@ -366,41 +369,41 @@ class Connector:
                 player_positions[position] = int(alt) if alt.isdigit() else alt
             else:
                 card_counter += 1
-                print(message + "player: (" + position + ") has no card. Players to check later: " + str(card_counter))
+                Logs.debug_message(message + "player: (" + position + ") has no card. Players to check later: " + str(card_counter))
         return player_positions, card_counter
 
     def get_timers(self, between_time=5):
         get_timers_message = "Connector.get_timers()"
-        print(get_timers_message + ": Start")
+        Logs.debug_message(get_timers_message + ": Start")
 
         start = self.driver.find_element_by_id("right"). \
             find_element_by_id("timer"). \
             find_element_by_class_name("time").text
 
-        print("Start timer obtained (" + start + "), waiting for end")
+        Logs.debug_message("Start timer obtained (" + start + "), waiting for end")
         for i in range(0, between_time):
             time.sleep(1)
 
         end = self.driver.find_element_by_id("right"). \
             find_element_by_id("timer"). \
             find_element_by_class_name("time").text
-        print(get_timers_message + "'Start time: " + start + "', 'End time: " + end + "'")
-        print(get_timers_message + ": End")
+        Logs.info_message(get_timers_message + "'Start time: " + start + "', 'End time: " + end + "'")
+        Logs.debug_message(get_timers_message + ": End")
         return [start, end]
 
     def element_located(self, selector):
         message = "Connector.element_located(): "
         try:
             self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, selector)))
-            print(message + "Element '" + selector + "' successfully located")
+            Logs.debug_message(message + "Element '" + selector + "' successfully located")
             return True
         except TimeoutException:
-            print(message + "Element '" + selector + "' not located!!!")
+            Logs.warning_message(message + "Element '" + selector + "' not located!!!")
             return False
 
     def time_util(self, seconds, location=""):
         for i in range(0, seconds):
-            print("Connector.time_util(" + location + "): " + str(seconds - i))
+            Logs.debug_message("Connector.time_util(" + location + "): " + str(seconds - i))
             time.sleep(1)
 
     def check_state(self, state_name):
@@ -410,11 +413,11 @@ class Connector:
             talon_state = self.driver.find_element_by_id("talon").get_attribute("class") == "show"
             bonus_state = self.driver.find_element_by_id("bonus").get_attribute("class") == "show"
         except NoSuchElementException:
-            print("ERROR in check_state()")
+            Logs.error_message("ERROR in check_state()")
             raise NoSuchElementException
 
-        print("states:\nbid_state = " + bid_state.__str__() + "\ncall_state = " + call_state.__str__() +
-              "\ntalon_state = " + talon_state.__str__() + "\nbonus_state = " + bonus_state.__str__())
+        Logs.debug_message("states:\nbid_state = " + bid_state.__str__() + "\ncall_state = " + call_state.__str__() +
+                           "\ntalon_state = " + talon_state.__str__() + "\nbonus_state = " + bonus_state.__str__())
         if bid_state:
             self.state = "bid"
         elif call_state:
@@ -427,7 +430,7 @@ class Connector:
             self.state = "game"
 
         if state_name != self.state:
-            print("WRONG STATE. Current state: " + state_name + ", Last known state: " + self.state)
+            Logs.info_message("WRONG STATE. Current state: " + state_name + ", Last known state: " + self.state)
             return False
         return True
 

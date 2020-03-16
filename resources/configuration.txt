@@ -1,23 +1,29 @@
-#####TAROT SETTINGS
+##### TAROT SETTINGS
 tarot_path=resources/tarot_cards.txt
 url=https://valat.si/tarok
 user_config=resources/user_config.txt
 # yes, no
 is_pass_encoded=yes
 
-#####TABLE SETTINGS
+##### TABLE SETTINGS
 player_number=4
 not_allowed_games=Valat,Barvni valat,Odprti berač,Berač,Solo tri,Solo dve,Solo ena,Solo brez
 # stack0 - me, stack1 - right, stack2 - up, stack3 - left
 player_positions=stack1,stack2,stack3
 
-#####BOT PARAMETERS
+##### BOT PARAMETERS
 #RandomBot, SemiBot, WonderfulBot
 playing_bot=WonderfulBot
 #Vražji, Težek
 opponent_bot=Vražji
 
-#####CARD SETTINGS
+##### CARD SETTINGS
 suit_signs=♥,♦,♠,♣
 tarot_count=22
 color_count=8
+# The sma
+min_important_tarot=16
+
+##### LOG SETTINGS
+#debug,info,warning,error
+log_level=debug,info,warning,error

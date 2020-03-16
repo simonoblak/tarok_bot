@@ -48,6 +48,15 @@ class Configuration:
         if not self.config["is_pass_encoded"] == "yes" and not self.config["is_pass_encoded"] == "no":
             errors.append("'is_pass_encoded' can only have 'yes' or 'no' values")
 
+        if not 0 < self.config["min_important_tarot"] < 23:
+            errors.append("'min_important_tarot' must be between 1 and 22")
+
+        allowed_log_settings = ["debug", "info", "warning", "error"]
+        log_settings = self.config["log_level"].split(",")
+        for setting in log_settings:
+            if setting not in allowed_log_settings:
+                errors.append("'" + setting + "' is not allowed in log_level")
+
         if len(errors) > 0:
             self.pretty_print("fix these errors")
             for e in errors:

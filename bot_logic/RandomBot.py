@@ -14,6 +14,10 @@ class RandomBot:
     def set_cards(self, cards):
         self.cards = cards
 
+    def init_round(self):
+        self.playing_suite = ""
+        self.king_indexes = []
+
     def choose_king(self):
         suits = config["suit_signs"].split(",")
         for card in self.cards:
@@ -37,4 +41,4 @@ class RandomBot:
         return return_cards
 
     def play_card(self, non_disabled_card_indexes, table, suite):
-        return random.sample(set(non_disabled_card_indexes), 1)[0]
+        return self.cards[random.sample(set(non_disabled_card_indexes), 1)[0]]

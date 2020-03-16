@@ -3,6 +3,7 @@ import random
 from bot_logic import SuitHelper
 from bot_logic import TalonPileHelper
 import operator
+from Logs import Logs
 
 config = Configuration.Configuration().get_config()
 # TODO razširi bazo tako da boš vsak primer (vsak return) si zapisal kolikokrat se je zgodil. npr. z številkami označi in s komentarjem zapiši še kej
@@ -29,6 +30,8 @@ class WonderfulBot:
         self.suit_objects = {}
         self.candidates = []
         self.number_of_rounds = 12 if config["player_number"] == 4 else 16 if config["player_number"] == 3 else 0
+        self.important_tarots = [x for x in range(config["min_important_tarot"], 23)]
+        Logs.init_logs()
 
     def set_cards(self, cards):
         self.cards = cards
@@ -42,6 +45,8 @@ class WonderfulBot:
                 self.suit_objects[s] = SuitHelper.SuitHelper(s)
             else:
                 self.suit_objects[s].reset_counters()
+                Logs.debug_message("Reseting counters for suit '" + s + "'")
+                Logs.debug_message(self.suit_objects[s])
 
         for card in self.cards:
             if card.is_tarot:
@@ -50,11 +55,12 @@ class WonderfulBot:
                 if card.is_king:
                     self.suit_objects[card.suit].has_king = True
                 self.suit_objects[card.suit].subtract_color()
-                self.suit_objects[card.suit].color_points += card.rank
+                self.suit_objects[card.suit].color_points += card.points
                 self.suit_objects[card.suit].card_alts.append(card.alt)
 
     def choose_king(self):
-        self.init_round()
+        # TODO poklič init round na začetku vsake runde, ne pa šele pri choose king
+        # self.init_round()
 
         message = "WonderfulBot.choose_king(): "
         suits = config["suit_signs"].split(",")
@@ -63,24 +69,26 @@ class WonderfulBot:
         # Barve, ki nimam v roki oz. imam kralja v tej barvi, izločim iz izbire
         for suit in self.suit_objects:
             if self.suit_objects[suit].has_king:
+                Logs.debug_message(message + "Removing suit '" + suit + "' because i have a king")
                 no_king_suits.remove(suit)
                 suits.remove(suit)
             elif self.suit_objects[suit].color_count == 8:
+                Logs.debug_message(message + "Removing suit '" + suit + "' because i don't have that color")
                 suits.remove(suit)
 
         if len(suits) == 0:
-            print(message + "No suit was good. Selecting random...")
+            Logs.debug_message(message + "No suit was good. Selecting random...")
             if len(no_king_suits) == 0:
-                print(message + "All 4 kings are in my hand... Good Luck...")
+                Logs.warning_message(message + "All 4 kings are in my hand... Good Luck...")
                 suits_array = config["suit_signs"].split(",")
             else:
                 suits_array = no_king_suits
             self.playing_suite = random.choice(suits_array)
-            print(message + "Randomly selected suit: " + self.playing_suite)
+            Logs.debug_message(message + "Randomly selected suit: " + self.playing_suite)
             return self.playing_suite
 
         if len(suits) == 1:
-            print(message + "Only 1 color is good. Selecting: " + suits[0])
+            Logs.debug_message(message + "Only 1 color is good. Selecting: " + suits[0])
             self.playing_suite = suits[0]
             return self.playing_suite
 
@@ -102,23 +110,23 @@ class WonderfulBot:
 
             for suit in no_king_suits:
                 if self.suit_objects[suit].color_count > 5:
-                    print(message + "Appending suit with less than 4 cards: " + suit)
+                    Logs.debug_message(message + "Appending suit with less than 4 cards: " + suit)
                     suits_with_3_or_less_cards.append(suit)
 
             if max_suit != "":
-                print(message + "Removing suit with highest point value: " + max_suit)
+                Logs.debug_message(message + "Removing suit with highest point value: " + max_suit)
                 suits.remove(max_suit)
                 if len(suits) == 1:
-                    print(message + "Only 1 color is good. Selecting: " + suits[0])
+                    Logs.debug_message(message + "Only 1 color is good. Selecting: " + suits[0])
                     self.playing_suite = suits[0]
                     return self.playing_suite
 
             if len(suits_with_3_or_less_cards) == 0:
-                print(message + "Selecting a suit with more than 3 cards: " + lowest_suit)
+                Logs.debug_message(message + "Selecting a suit with more than 3 cards: " + lowest_suit)
                 self.playing_suite = lowest_suit
                 return self.playing_suite
 
-            print(message + "Still no king... Selecting suit with max color points")
+            Logs.debug_message(message + "Still no king... Selecting suit with max color points")
             max_color_points = 0
             max_color_points_suit = ""
             for suit in suits_with_3_or_less_cards:
@@ -126,7 +134,7 @@ class WonderfulBot:
                     max_color_points = self.suit_objects[suit].color_points
                     max_color_points_suit = suit
 
-            print(message + "Selecting suit with max color points: " + max_color_points_suit)
+            Logs.debug_message(message + "Selecting suit with max color points: " + max_color_points_suit)
             self.playing_suite = max_color_points_suit
             return self.playing_suite
 
@@ -149,31 +157,31 @@ class WonderfulBot:
                 # if removable color is found, select the other one
                 if max_color_points_suit != "":
                     suits.remove(max_color_points_suit)
-                    print(message + "We can store one color with 2 or less cards: " + suits[0])
+                    Logs.debug_message(message + "We can store one color with 2 or less cards: " + suits[0])
                     self.playing_suite = suits[0]
                     return self.playing_suite
 
                 # if no color can be removed, select the color with less cards
                 if suit_one.color_count != suit_two.color_count:
                     less_cards_suit = suit_one.suit if suit_one.color_count > suit_two.color_count else suit_two.suit
-                    print(message + "minimum cards has: " + less_cards_suit)
+                    Logs.debug_message(message + "minimum cards has: " + less_cards_suit)
                     self.playing_suite = less_cards_suit
                     return self.playing_suite
 
                 # if card number is the same check values; select the higher one
                 if suit_one.color_points != suit_two.color_points:
                     higher_points_suit = suit_one.suit if suit_one.color_points > suit_two.color_points else suit_two.suit
-                    print(message + "minimum points has: " + higher_points_suit)
+                    Logs.debug_message(message + "minimum points has: " + higher_points_suit)
                     self.playing_suite = higher_points_suit
                     return self.playing_suite
 
                 # select random
                 self.playing_suite = random.choice(suits)
-                print(message + "randomly selected: " + self.playing_suite)
+                Logs.debug_message(message + "randomly selected: " + self.playing_suite)
                 return self.playing_suite
 
             # more than 2 suits
-            print(message + "more than 2 suits available...")
+            Logs.debug_message(message + "more than 2 suits available...")
             one_card_suit = []
             two_card_suit = []
             three_card_suit = []
@@ -191,7 +199,7 @@ class WonderfulBot:
                     min_cards_suit = s
 
             if len(one_card_suit + two_card_suit + three_card_suit) == 0:
-                print(message + "minimum cards has: " + min_cards_suit)
+                Logs.debug_message(message + "minimum cards has: " + min_cards_suit)
                 self.playing_suite = min_cards_suit
                 return self.playing_suite
 
@@ -204,7 +212,7 @@ class WonderfulBot:
                     self.candidates += one_card_suit
 
                 self.playing_suite = random.choice(ps)
-                print(message + "Selecting random suit that has two or three cards: " + self.playing_suite)
+                Logs.debug_message(message + "Selecting random suit that has one card: " + self.playing_suite)
                 return self.playing_suite
 
             # check if we can remove a single color
@@ -212,7 +220,7 @@ class WonderfulBot:
                 if len(one_card_suit) > 0:
                     # there will be only one suit with one card
                     self.playing_suite = one_card_suit[0]
-                    print(message + "Selecting suit with one ca: " + self.playing_suite)
+                    Logs.debug_message(message + "Selecting suit with one card: " + self.playing_suite)
                     return self.playing_suite
 
                 max_color_card_suit = ""
@@ -226,12 +234,12 @@ class WonderfulBot:
                 # TODO remove this if because this should produce a suit. This if statement is a failsafe
                 if max_color_card_suit != "":
                     self.playing_suite = max_color_card_suit
-                    print(message + "Selecting suit with max card: " + self.playing_suite)
+                    Logs.debug_message(message + "Selecting suit with max card: " + self.playing_suite)
                     return self.playing_suite
 
-                print("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
+                Logs.error_message("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
                 self.playing_suite = random.choice(two_card_suit)
-                print(message + "SOMETHING IS WRONG: " + self.playing_suite)
+                Logs.error_message(message + "SOMETHING IS WRONG: " + self.playing_suite)
                 return self.playing_suite
 
             # if no color can be removed ...
@@ -247,15 +255,15 @@ class WonderfulBot:
                 # TODO remove this if because this should produce a suit. This if statement is a failsafe
                 if max_color_card_suit != "":
                     self.playing_suite = max_color_card_suit
-                    print(message + "Selecting suit with max card: " + self.playing_suite)
+                    Logs.debug_message(message + "Selecting suit with max card: " + self.playing_suite)
                     return self.playing_suite
 
-                print("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
+                Logs.error_message("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
                 self.playing_suite = random.choice(three_card_suit)
-                print(message + "SOMETHING IS WRONG: " + self.playing_suite)
+                Logs.error_message(message + "SOMETHING IS WRONG: " + self.playing_suite)
                 return self.playing_suite
 
-        print(message + "This is not a 1 or 2 game. selecting a random suit with no king...")
+        Logs.warning_message(message + "This is not a 1 or 2 game. selecting a random suit with no king...")
         self.playing_suite = random.choice(no_king_suits)
         return self.playing_suite
 
@@ -305,19 +313,19 @@ class WonderfulBot:
         # Zbiram barvo prej kakor monda ker če z kraljem poberem dobim še XXI zraven
         if has_my_color:
             if has_mond and self.suit_objects[self.playing_suite].color_count < 4:  # self.color_count[self.playing_suite] < 4:
-                print(message + "Selecting XXI over the King with my playing suit")
+                Logs.debug_message(message + "Selecting XXI over the King with my playing suit")
                 return has_mond_index
 
-            print(message + "Selecting King with my playing suit...")
+            Logs.debug_message(message + "Selecting King with my playing suit...")
             return has_my_color_index
 
         # Nekak je tole smiselno ker če se zgodi da sta XXI in SKIS v talonu potem se znebis skisa
         if has_mond:
-            print(message + "Selecting XXI...")
+            Logs.debug_message(message + "Selecting XXI...")
             return has_mond_index
 
         if has_skis:
-            print(message + "Choosing pile with Skis")
+            Logs.debug_message(message + "Choosing pile with Skis")
             return has_skis_index
 
         for i, card in enumerate(talon):
@@ -329,7 +337,7 @@ class WonderfulBot:
         # TODO insert logic if talon has kings
         if len(talon_kings) != 0:
             if len(talon_kings) == 1:
-                print(message + "Choosing pile with the King")
+                Logs.debug_message(message + "Choosing pile with the King")
                 return talon_kings[0][1]
 
             if self.game == 2 and len(talon_kings) == 2:
@@ -341,19 +349,19 @@ class WonderfulBot:
                 for king in talon_kings:
                     index_sum += king[1]
                 if index_sum == 1 or index_sum == 5 or index_sum == 10:
-                    print(message + "Choosing pile with the 2 Kings")
+                    Logs.debug_message(message + "Choosing pile with the 2 Kings")
                     return talon_kings[0][1]
 
         # Corner case: če se zgodi da ima talon 2 kralja v ločenih kupčkih v igri v 2 potem je 2/3 šanse da bo pagat z enim od kraljev
         if has_pagat:
-            print(message + "Selecting I")
+            Logs.debug_message(message + "Selecting I")
             return has_pagat_index
 
         # TODO fix this
         if len(talon_tarots) != 0:
             pass
 
-        print(message + "Piles -> " + str(piles))
+        Logs.debug_message(message + "Piles -> " + str(piles))
         n_start = 0
         n_end = n
         # TODO nared tko da bojo pile helperji pomagal kartam v roki, ne pa zbrat najboljši kupček
@@ -364,13 +372,13 @@ class WonderfulBot:
             for n_index in range(n_start, n_end):
                 talon_card = talon[n_index]
                 # scores[pile_index] += talon_card.points
-                points += talon_card.points
-                grade += talon_card.points / 2
+                # points += talon_card.points
+                # grade += talon_card.points / 2
                 if talon_card.is_tarot:
                     grade += talon_card.rank / 10
                 else:
                     grade += tph.scale_grade_color[talon_card.rank]
-            tph.points += points
+            # tph.points += points
             tph.grade += grade
             pile_helpers.append(tph)
             n_start = n_end
@@ -378,7 +386,9 @@ class WonderfulBot:
         # 0 -> 0; 1 -> 2; 2 -> 4
         # max_grade = (ocena, id oz. index)
         max_grade = (0, 0)
+        Logs.debug_message(message + "Pile grades...")
         for ph in pile_helpers:
+            Logs.debug_message(ph.grade)
             if max_grade[0] < ph.grade:
                 max_grade = (ph.grade, ph.id)
 
@@ -395,6 +405,7 @@ class WonderfulBot:
         message = "WonderfulBot.choose_talon_step_2(): "
         suits = config["suit_signs"].split(",")
         tarot_count = 0
+        king_count = 0
         suit_counter = {}
         cards_to_put_down = []
         potential_cards = []
@@ -413,11 +424,13 @@ class WonderfulBot:
             else:
                 if card.is_king:
                     suit_counter[card.suit].has_king = True
+                    king_count += 1
                 suit_counter[card.suit].subtract_color()
 
         # TODO neki nared s tem
         # če si bom mogu taroke zalagat
-        if tarot_count >= self.number_of_rounds:
+        if tarot_count + king_count >= self.number_of_rounds:
+            Logs.debug_message(message + "tarot count and king count are higher than rounds. NICE!!!")
             """
             # in case the 'non_disabled_card_indexes' variable will be removed
             sorted_cards = self.cards
@@ -446,8 +459,7 @@ class WonderfulBot:
                 other_suits.append(suit)
 
         if len(one_card_suits) > 0:
-            print(message + "Suits with 1 card...")
-            print(one_card_suits)
+            Logs.debug_message(message + "Suits with 1 card..." + str(one_card_suits))
             if self.game == 1:
                 if len(one_card_suits) == 1:
                     if not suit_counter[one_card_suits[0]].has_king and not self.playing_suite == one_card_suits[0]:
@@ -466,7 +478,7 @@ class WonderfulBot:
             if self.game == 2:
                 if len(one_card_suits) == 1:
                     if not suit_counter[one_card_suits[0]].has_king and not self.playing_suite == one_card_suits[0]:
-                        cards_to_put_down.append(self.get_cards_from_suit(one_card_suits[0]))
+                        cards_to_put_down += self.get_cards_from_suit(one_card_suits[0])
                 else:
                     game_2_suits_with_1_card = []
                     for s in one_card_suits:
@@ -490,8 +502,7 @@ class WonderfulBot:
                     cards_to_put_down += game_2_suits_with_1_card
 
         if len(two_card_suits) > 0:
-            print(message + "Suits with 2 cards...")
-            print(two_card_suits)
+            Logs.debug_message(message + "Suits with 2 cards..." + str(two_card_suits))
             if self.game == 1:
                 if self.playing_suite in two_card_suits:
                     ps_list = self.get_cards_from_suit(self.playing_suite)
@@ -499,8 +510,12 @@ class WonderfulBot:
                         return [ps_list[0]]
                     return [ps_list[1]]
 
-                # Najprej poiščemo suit, ki se je najmanjkrat pojavil v talonu in v roki.
-                suit_with_min_cards = max(suit_counter, key=suit_counter.get)
+                # Najprej poiščemo suit, ki se je najmanjkrat pojavil v talonu in v roki in ki ga imam v roki
+                suit_with_min_cards = 8
+                for s in suit_counter:
+                    if suit_counter[s].color_count != 8 and suit_counter[s].color_count < suit_with_min_cards:
+                        suit_with_min_cards = s
+                # suit_with_min_cards = max(suit_counter, key=operator.attrgetter('color_count'))
                 swmc_list = self.get_cards_from_suit(suit_with_min_cards)
 
                 # Vrnemo karto, ki ima največ točk in ki ni kralj.
@@ -512,39 +527,46 @@ class WonderfulBot:
                 if len(two_card_suits) == 1:
                     s = two_card_suits[0]
                     two_card_suit_list = self.get_cards_from_suit(s)
-                    if not suit_counter[s].has_king:
-                        if suit_counter[s].color_count > 3:
-                            return two_card_suit_list
-                        potential_cards += two_card_suit_list
-                    potential_cards.append(two_card_suit_list[1])
+                    if self.playing_suite != s:
+                        if not suit_counter[s].has_king:
+                            if suit_counter[s].color_count > 3:
+                                return two_card_suit_list
+                            potential_cards += two_card_suit_list
+                        else:
+                            potential_cards.append(two_card_suit_list[1])
+                    else:
+                        potential_cards.append(two_card_suit_list[0] if not suit_counter[s].has_king else two_card_suit_list[1])
                 else:
                     suit_points = {}
                     for s in two_card_suits:
                         tcsc_list = self.get_cards_from_suit(s)
-                        if not suit_counter[s].has_king:
-                            if suit_counter[s].color_count > 3:
-                                points = 0
-                                for c in tcsc_list:
-                                    points += c.points
-                                suit_points[s] = points
+                        if self.playing_suite != s:
+                            if not suit_counter[s].has_king:
+                                if suit_counter[s].color_count > 3:
+                                    points = 0
+                                    for c in tcsc_list:
+                                        points += c.points
+                                    suit_points[s] = points
+                                else:
+                                    potential_cards += tcsc_list
                             else:
-                                potential_cards += tcsc_list
+                                potential_cards.append(tcsc_list[1])
                         else:
-                            potential_cards.append(tcsc_list[1])
+                            potential_cards.append(tcsc_list[0] if not suit_counter[s].has_king else tcsc_list[1])
                     if len(suit_points) != 0:
                         max_points_suit = max(suit_points, key=suit_points.get)
-                        print(message + "Suit with max points is: " + max_points_suit)
+                        Logs.debug_message(message + "Suit with max points is: " + max_points_suit)
                         return self.get_cards_from_suit(max_points_suit)
 
         if len(potential_cards) > 0:
             potential_cards.sort(key=operator.attrgetter('rank'), reverse=True)
             for c in potential_cards:
                 if len(cards_to_put_down) >= self.game:
-                    print(message + "Enough cards were already selected for this game.")
+                    Logs.debug_message(message + "Enough cards were already selected for this game.")
                     return cards_to_put_down
                 cards_to_put_down.append(c)
 
-        print(message + "No suits with 1 or 2 cards. Choosing cards with max points.")
+        Logs.debug_message(message + "No suits with 1 or 2 cards. Choosing cards with max points.")
         sorted_cards = self.cards
         sorted_cards.sort(key=operator.attrgetter('rank'), reverse=True)
         for c in sorted_cards:
@@ -573,26 +595,35 @@ class WonderfulBot:
         if suit == "":
             # TODO klele poprav da nebo random prve karte metal,
             #  mogoče mal barve preštudiri al pa če se že splača tarokirat
-            print(message + "first one, selecting card...")
+            Logs.debug_message(message + "first one, selecting card...")
 
             # Check if i have a king that it's suit has not been played yet
             #   if not then play king
             #   if yes then play tarot or low color that has allready been played
-            possible_king = "8"
+            king_rank = "8"
             for so in self.suit_objects:
                 sh = self.suit_objects[so]
-                if sh.has_king and not sh.was_already_played:
-                    pass
+                if sh.has_king and not sh.was_already_played and sh.color_count > 3:
+                    Logs.debug_message(message + "Choosing king -> " + sh.suit + king_rank)
+                    return self.get_card_from_alt(sh.suit + king_rank)
+
+            # TODO tarokiri če nimaš nobene slabe barve oz. če sta vsaj 2 barvi šle čez
+            tarots_in_hand = self.count_tarots_in_hand()
+
+            # deljeno z 3 je zato ker delim z 3 ostalimi igralci. Svoje taroke takoj odštejem že na začetku
+            if self.tarot_count / 3 < tarots_in_hand:
+                pass
 
             index = random.sample(set(non_disabled_card_indexes), 1)[0]
-            print(message + "Random card -> " + self.cards[index].alt)
-            return index
+            Logs.debug_message(message + "Random card -> " + self.cards[index].alt)
+            return self.cards[index]
 
         if suit != "tarot":
-            index = self.play_color(table, suit)
-            if index != -1:
-                return index
-            print(message + "I probably don't have any colors of suit (" + suit + ") left, going to tarots...")
+            self.suit_objects[suit].was_already_played = True
+            card_to_put_down = self.play_color(table, suit)
+            if card_to_put_down is not None:
+                return card_to_put_down
+            Logs.debug_message(message + "I probably don't have any colors of suit (" + suit + ") left, going to tarots...")
 
         return self.play_tarot(table, non_disabled_card_indexes)
 
@@ -600,7 +631,7 @@ class WonderfulBot:
         # "♥" "♦" "♠" "♣"
         message = "WonderfulBot.play_color(): "
         tarot_on_desk = False
-        index = -1
+        card_to_put_down = None
         max_color_on_table = 1
         lowest_color_in_hand = 9
         lcih_index = 0
@@ -611,7 +642,7 @@ class WonderfulBot:
                     max_color_on_table = color_on_table
             if isinstance(table[stack], int):
                 tarot_on_desk = True
-        print(message + "Max Color on table: " + suit + str(max_color_on_table))
+        Logs.debug_message(message + "Max Color on table: " + suit + str(max_color_on_table))
         i = 0
         while i < len(self.cards):
             # works only if cards are sorted
@@ -619,21 +650,21 @@ class WonderfulBot:
                 break
             if self.cards[i].suit == suit:
                 if self.cards[i].rank > max_color_on_table and not tarot_on_desk:
-                    print(message + "clicking card -> " + self.cards[i].alt)
-                    index = i
-                    del (self.cards[index])
+                    Logs.debug_message(message + "clicking card -> " + self.cards[i].alt)
+                    card_to_put_down = self.cards[i]
+                    # del (self.cards[i])
                     break
                 if self.cards[i].rank < lowest_color_in_hand:
                     lowest_color_in_hand = self.cards[i].rank
                     lcih_index = i
             i += 1
 
-        if index == -1 and lowest_color_in_hand != 9:
-            print(message + "clicking lowest color -> " + self.cards[lcih_index].alt)
-            del (self.cards[lcih_index])
-            return lcih_index
-
-        return index
+        if card_to_put_down is None and lowest_color_in_hand != 9:
+            Logs.debug_message(message + "clicking lowest color -> " + self.cards[lcih_index].alt)
+            card_to_put_down = self.cards[lcih_index]
+            # del (self.cards[lcih_index])
+            return card_to_put_down
+        return card_to_put_down
 
     def play_tarot(self, table, non_disabled_card_indexes):
         message = "WonderfulBot.play_tarot(): "
@@ -643,28 +674,31 @@ class WonderfulBot:
         for stack in table:
             if table[stack] != "" and isinstance(table[stack], int) and max_tarot_on_table < table[stack]:
                 max_tarot_on_table = table[stack]
-        print(message + "Max Tarot on table: " + str(max_tarot_on_table))
+        Logs.debug_message(message + "Max Tarot on table: " + str(max_tarot_on_table))
         i = 0
         while i < len(self.cards):
             # works only if cards are sorted
             if self.cards[i].is_tarot:
                 if self.cards[i].rank > max_tarot_on_table:
-                    print(message + "clicking card -> " + self.cards[i].alt)
-                    del (self.cards[i])
-                    return i
+                    Logs.debug_message(message + "clicking card -> " + self.cards[i].alt)
+                    card_to_put_down = self.cards[i]
+                    # del (self.cards[i])
+                    return card_to_put_down
                 if lowest_tarot_in_hand > self.cards[i].rank:
                     lowest_tarot_in_hand = self.cards[i].rank
                     ltih_index = i
             i += 1
 
         if self.check_if_has_tarot_card():
-            print(message + "clicking lowest tarot -> " + self.cards[ltih_index].alt)
-            del (self.cards[ltih_index])
-            return ltih_index
-        print(message + "I probably don't have any tarots left, selecting random card...")
+            Logs.debug_message(message + "clicking lowest tarot -> " + self.cards[ltih_index].alt)
+            card_to_put_down = self.cards[ltih_index]
+            # del (self.cards[ltih_index])
+            return card_to_put_down
+        Logs.debug_message(message + "I probably don't have any tarots left, selecting random card...")
         ran = random.sample(set(non_disabled_card_indexes), 1)[0]
-        print(message + "Selecting -> " + str(self.cards[ran]))
-        return ran
+        Logs.debug_message(message + "Selecting -> " + str(self.cards[ran].alt))
+        # del (self.cards[ran])
+        return self.cards[ran]
 
     def check_if_has_tarot_card(self):
         for card in self.cards:
@@ -672,4 +706,16 @@ class WonderfulBot:
                 return True
         return False
 
-    #def get_index_from_alt
+    def get_card_from_alt(self, alt):
+        message = "WonderfulBot.get_card_from_alt(): "
+        for c in self.cards:
+            if c.alt == alt:
+                return c
+        Logs.error_message(message + "Something is wrong.")
+
+    def count_tarots_in_hand(self):
+        counter = 0
+        for c in self.cards:
+            if c.is_tarot:
+                counter += 1
+        return counter

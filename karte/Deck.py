@@ -17,11 +17,15 @@ class Deck:
             Deck.deck.append(card)
         print("Created deck in: " + create_deck_message)
 
-    def get_deck(self):
-        return self.deck
+    @staticmethod
+    def get_deck():
+        return Deck.deck
 
-    # For testing purposes
     def get_random_12_list_and_talon(self):
+        """
+        For testing purposes
+        :return: map of "cards", "card_names", "talon"
+        """
         cards = []
         talon = []
         card_names = []
