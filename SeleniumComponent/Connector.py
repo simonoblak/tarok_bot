@@ -32,7 +32,7 @@ class Connector:
     def __init__(self, url):
         self.url = url
         self.driver = self.init_driver()
-        self.wait = WebDriverWait(self.driver, 10)
+        self.wait = WebDriverWait(self.driver, 7)
         self.is_four_players = config["player_number"] == 4
         self.player_name = ""
         self.tool = bot_logic.Tools.Tools()
@@ -302,6 +302,7 @@ class Connector:
             # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
             rounds_left = 12 if self.is_four_players else 16
             while rounds_left > 1:
+                # TODO preverji če se je okno za naslednjo rundo pojavu
                 if self.tool.is_my_turn(self.get_timers(2)):
                     table, card_counter = self.get_cards_from_table(player_positions)
                     Logs.debug_message("############ TABLE ############")
@@ -326,21 +327,29 @@ class Connector:
                     Logs.debug_message("####### WHOLE TABLE ############")
                     Logs.debug_message(table)
                     Logs.debug_message("################################")
+                    # Odštejemo števce za karte in preverimo za možnega ally-ja
+                    self.tool.set_suit_helper_objects_and_tarots(table)
+                    self.tool.check_for_ally(table)
 
                     # Reset the map
                     for p in player_positions:
                         player_positions[p] = ""
 
-            # Get last cards from table, valat.si automaticaly plays the last card for you so just get from table
-            for position in player_positions:
-                if player_positions[position] == "" and self.element_located("#" + position + " img"):
-                    player_positions[position] = self.driver.find_element_by_id(position) \
-                        .find_elements_by_css_selector("img")[0] \
-                        .get_attribute("alt")
+            while True:
+                self.time_util(5, "waiting to get the last cards")
+                self.get_cards()
+                if len(self.tool.cards) == 0:
+                    # Get last cards from table, valat.si automaticaly plays the last card for you so just get from table
+                    for position in player_positions:
+                        if player_positions[position] == "" and self.element_located("#" + position + " img"):
+                            player_positions[position] = self.driver.find_element_by_id(position) \
+                                .find_elements_by_css_selector("img")[0] \
+                                .get_attribute("alt")
 
-            Logs.debug_message("####### LAST CARDS FOR WHOLE TABLE ############")
-            Logs.debug_message(player_positions)
-            Logs.debug_message("###############################################")
+                    Logs.debug_message("####### LAST CARDS FOR WHOLE TABLE ############")
+                    Logs.debug_message(player_positions)
+                    Logs.debug_message("###############################################")
+                    break
 
             self.state = "end_game"
         except NoSuchElementException:
@@ -433,6 +442,19 @@ class Connector:
             Logs.info_message("WRONG STATE. Current state: " + state_name + ", Last known state: " + self.state)
             return False
         return True
+
+    def check_if_set_or_reset(self):
+        message = "Connector.check_if_set_or_reset(): "
+        last_state = ""
+        try:
+            last_text = self.driver.find_element_by_css_selector("#chat .history div span")
+            if last_text == "set" and last_state != "set":
+                self.state = "bid"
+            elif last_text == "reset" and last_state != "reset":
+                self.state = "halt"
+        except NoSuchElementException:
+            Logs.error_message("Error in: " + message)
+            raise NoSuchElementException
 
     def close_connection(self):
         self.driver.close()

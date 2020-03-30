@@ -4,6 +4,8 @@ from bot_logic import SuitHelper
 from bot_logic import TalonPileHelper
 import operator
 from Logs import Logs
+from math import ceil
+from players.Player import Player
 
 config = Configuration.Configuration().get_config()
 # TODO razširi bazo tako da boš vsak primer (vsak return) si zapisal kolikokrat se je zgodil. npr. z številkami označi in s komentarjem zapiši še kej
@@ -19,28 +21,41 @@ https://snipsave.com/user/blavrhovec/snippet/uMFsYBo2XehFsb5Hii/?fbclid=IwAR29y2
 class WonderfulBot:
     def __init__(self, cards):
         self.cards = cards
-        self.king_indexes = []
         self.playing_suite = ""
         self.game = -1
         self.tarot_count = 22
-        # "♥" "♦" "♠" "♣"
-        # self.color_count = {"♥": 8, "♦": 8, "♠": 8, "♣": 8}
         self.history = {}
-        self.ally = "stack0"
+        self.ally = ""
         self.suit_objects = {}
-        self.candidates = []
         self.number_of_rounds = 12 if config["player_number"] == 4 else 16 if config["player_number"] == 3 else 0
         self.important_tarots = [x for x in range(config["min_important_tarot"], 23)]
+        self.king_rank = "8"
+        self.players = {}
         Logs.init_logs()
 
     def set_cards(self, cards):
+        """
+        Interface method.
+        :param cards:
+        :return:
+        """
         self.cards = cards
 
-    # TODO prestavi to metodo v Tools.py in uporabi pri ostalih botih
     def init_round(self):
-        self.ally = "stack0"
+        """
+        Interface method.
+        :return:
+        """
+        self.playing_suite = ""
+        self.game = -1
+        self.tarot_count = 22
+        self.history = {}
+        self.ally = ""
+        self.important_tarots = [x for x in range(config["min_important_tarot"], 23)]
+
+        for p in config["player_positions"].split(","):
+            self.players[p] = Player(p)
         for s in config["suit_signs"].split(","):
-            #if len(self.suit_objects) == 0:
             if s not in self.suit_objects:
                 self.suit_objects[s] = SuitHelper.SuitHelper(s)
             else:
@@ -59,6 +74,10 @@ class WonderfulBot:
                 self.suit_objects[card.suit].card_alts.append(card.alt)
 
     def choose_king(self):
+        """
+        Interface method.
+        :return:
+        """
         # TODO poklič init round na začetku vsake runde, ne pa šele pri choose king
         # self.init_round()
 
@@ -182,6 +201,7 @@ class WonderfulBot:
 
             # more than 2 suits
             Logs.debug_message(message + "more than 2 suits available...")
+            Logs.debug_message(suits)
             one_card_suit = []
             two_card_suit = []
             three_card_suit = []
@@ -209,10 +229,10 @@ class WonderfulBot:
                     ps = one_card_suit
                 else:
                     ps = two_card_suit + three_card_suit
-                    self.candidates += one_card_suit
 
                 self.playing_suite = random.choice(ps)
                 Logs.debug_message(message + "Selecting random suit that has one card: " + self.playing_suite)
+                Logs.debug_message(ps)
                 return self.playing_suite
 
             # check if we can remove a single color
@@ -268,6 +288,12 @@ class WonderfulBot:
         return self.playing_suite
 
     def choose_talon_step_1(self, n, talon):
+        """
+        Interface method.
+        :param n:
+        :param talon:
+        :return:
+        """
         message = "WonderfulBot.choose_talon_step_1(): "
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
         pile_helpers = []
@@ -402,6 +428,12 @@ class WonderfulBot:
             return max_grade[1]
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
+        """
+        Interface method.
+        :param n:
+        :param non_disabled_card_indexes:
+        :return:
+        """
         message = "WonderfulBot.choose_talon_step_2(): "
         suits = config["suit_signs"].split(",")
         tarot_count = 0
@@ -591,47 +623,121 @@ class WonderfulBot:
         return suited_cards
 
     def play_card(self, non_disabled_card_indexes, table, suit):
+        """
+        Interface method.
+        :param non_disabled_card_indexes:
+        :param table:
+        :param suit:
+        :return:
+        """
         message = "WonderfulBot.play_card(): "
+        if self.ally != "":
+            self.players[self.ally].is_ally = True
         if suit == "":
-            # TODO klele poprav da nebo random prve karte metal,
-            #  mogoče mal barve preštudiri al pa če se že splača tarokirat
             Logs.debug_message(message + "first one, selecting card...")
-
-            # Check if i have a king that it's suit has not been played yet
-            #   if not then play king
-            #   if yes then play tarot or low color that has allready been played
-            king_rank = "8"
-            for so in self.suit_objects:
-                sh = self.suit_objects[so]
-                if sh.has_king and not sh.was_already_played and sh.color_count > 3:
-                    Logs.debug_message(message + "Choosing king -> " + sh.suit + king_rank)
-                    return self.get_card_from_alt(sh.suit + king_rank)
-
-            # TODO tarokiri če nimaš nobene slabe barve oz. če sta vsaj 2 barvi šle čez
-            tarots_in_hand = self.count_tarots_in_hand()
-
-            # deljeno z 3 je zato ker delim z 3 ostalimi igralci. Svoje taroke takoj odštejem že na začetku
-            if self.tarot_count / 3 < tarots_in_hand:
-                pass
-
-            index = random.sample(set(non_disabled_card_indexes), 1)[0]
-            Logs.debug_message(message + "Random card -> " + self.cards[index].alt)
-            return self.cards[index]
+            return self.play_first(non_disabled_card_indexes)
 
         if suit != "tarot":
-            self.suit_objects[suit].was_already_played = True
+            Logs.debug_message("Suit -> " + suit)
+            Logs.debug_message("Suit Objects")
+            Logs.debug_message(self.suit_objects.keys())
             card_to_put_down = self.play_color(table, suit)
             if card_to_put_down is not None:
+                self.suit_objects[suit].was_already_played = True
                 return card_to_put_down
             Logs.debug_message(message + "I probably don't have any colors of suit (" + suit + ") left, going to tarots...")
 
         return self.play_tarot(table, non_disabled_card_indexes)
+
+    def play_first(self, non_disabled_card_indexes):
+        message = "WonderfulBot.play_first(): "
+        # Check if i have a king that it's suit has not been played yet
+        for so in self.suit_objects:
+            sh = self.suit_objects[so]
+            if sh.has_king and not sh.was_already_played and sh.color_count > 3:
+                Logs.debug_message(message + "Choosing king -> " + sh.suit + self.king_rank)
+                return self.get_card_from_alt(sh.suit + self.king_rank)
+
+        # TODO tarokiri če nimaš nobene slabe barve oz. če sta vsaj 2 barvi šle čez
+        tarots_in_hand_counter = self.count_tarots_in_hand()
+
+        # deljeno z 3 je zato ker delim z 3 ostalimi igralci. Svoje taroke takoj odštejem že na začetku
+        # Zaokrožim navzgor 'ceil()'
+        if ceil(self.tarot_count / 3) < tarots_in_hand_counter:
+            Logs.debug_message(message + "tarot_count / 3 < tarots_in_hand_counter = highest tarot")
+            return self.get_highest_or_lowest_tarot("H")
+
+        # poišči če je kakšna barva že bila odigrana in odigraj najnižjo karto v tej barvi (ki ni dama ali kralj?!?)
+        already_played_suits_in_my_hand = []
+        for c in self.cards:
+            if not c.is_tarot and \
+                    c.suit not in already_played_suits_in_my_hand and \
+                    self.suit_objects[c.suit].was_already_played and \
+                    c.rank >= 7:
+                already_played_suits_in_my_hand.append(c.suit)
+
+        if len(already_played_suits_in_my_hand) > 0:
+            min_color_count = (0, "")
+            for s in already_played_suits_in_my_hand:
+                cc = self.suit_objects[s].color_count
+                if cc > min_color_count[0]:
+                    min_color_count = (cc, s)
+            Logs.debug_message(message + "Returning color with lowest rank...")
+            return self.get_cards_from_suit(min_color_count[1])[-1]
+
+        # random med kartami ki niso kralji ali dame
+        platelci_indexi = []
+        for index, c in enumerate(self.cards):
+            if not c.is_tarot and c.rank <= 6:
+                platelci_indexi.append(index)
+        if len(platelci_indexi) > 0:
+            index = random.sample(set(platelci_indexi), 1)[0]
+            Logs.debug_message(message + "Selecting random card lower than Queen.")
+            return self.cards[index]
+
+        # odigraj najnižjega taroka
+        if tarots_in_hand_counter > 0:
+            Logs.debug_message(message + "Returning lowest tarot.")
+            return self.get_highest_or_lowest_tarot("L")
+
+        index = random.sample(set(non_disabled_card_indexes), 1)[0]
+        Logs.debug_message(message + "Random card -> " + self.cards[index].alt)
+        return self.cards[index]
+
+    def does_ally_win_color(self, table, suit):
+        message = "WonderfulBot.does_ally_win_color(): "
+        tarot_on_desk = False
+        max_color_on_table = 0
+        for stack in table:
+            if table[stack] != "" and not isinstance(table[stack], int):
+                color_on_table = int(table[stack][1])
+                if suit == table[stack][0] and max_color_on_table < color_on_table:
+                    max_color_on_table = color_on_table
+            if isinstance(table[stack], int):
+                tarot_on_desk = True
+        Logs.debug_message(message + "Max Color on table: " + suit + str(max_color_on_table))
+
+        if suit + str(max_color_on_table) == table[self.ally] and not tarot_on_desk:
+            return True
+
+        Logs.debug_message(message + "Ally not the highest OR tarot on desk")
+
+        return self.does_ally_win_tarot(table) if tarot_on_desk else False
+
+    def does_ally_win_tarot(self, table):
+        message = "WonderfulBot.does_ally_win_tarot(): "
+        max_tarot = 0
+        for stack in table:
+            if isinstance(table[stack], int) and max_tarot < table[stack]:
+                max_tarot = table[stack]
+        return max_tarot == table[self.ally]
 
     def play_color(self, table, suit):
         # "♥" "♦" "♠" "♣"
         message = "WonderfulBot.play_color(): "
         tarot_on_desk = False
         card_to_put_down = None
+        is_ally_going_to_take = False
         max_color_on_table = 1
         lowest_color_in_hand = 9
         lcih_index = 0
@@ -643,6 +749,88 @@ class WonderfulBot:
             if isinstance(table[stack], int):
                 tarot_on_desk = True
         Logs.debug_message(message + "Max Color on table: " + suit + str(max_color_on_table))
+
+        # ali je znan zaveznik?
+        if self.ally != "":
+            # (ali bo on pobral zaenkrat AND ali je zadnji na vrsti) OR ima on taroke in ostala dva ne
+            others_have_tarots = False
+            for playa in self.players:
+                if playa.has_tarots and playa.name != self.ally:
+                    others_have_tarots = True
+            if (self.ally == "stack3" and self.does_ally_win_color(table, suit)) or \
+                    (not others_have_tarots and self.players[self.ally].has_tarots):
+                # RETURN max rank ali vredno karto
+                Logs.debug_message(message + "returning max rank suit")
+                c = self.get_highest_or_lowest_color(suit, "H")
+                if c is not None:
+                    return c
+                Logs.debug_message(message + "card not found. Trying tarot.")
+
+                c = self.get_highest_or_lowest_tarot("L", True, True)
+                if c is not None:
+                    return c
+                Logs.debug_message(message + "No tarots in hand. Returning most valuable card.")
+                return self.get_most_or_least_valuable_card(False)
+
+            # TODO ali imam jaz možnost pobrat AND ali je ta barva še ni bila odigrana AND ali je counter > 3
+            if not self.suit_objects[suit].was_already_played and self.suit_objects[suit].color_count > 3:
+                Logs.debug_message(message + "Re")
+                #TODO nadaljuj tuki
+                pass
+
+            Logs.debug_message(message + "Returning min rank card")
+            c = self.get_highest_or_lowest_color(suit, "L")
+            if c is not None:
+                return c
+
+            Logs.debug_message(message + "card suit not found. Trying tarot.")
+            c = self.get_highest_or_lowest_tarot("L")
+            if c is not None:
+                return c
+
+            Logs.debug_message(message + "No tarots in hand. Returning most valuable card.")
+            return self.get_most_or_least_valuable_card(False)
+
+        #ali je znan zaveznik?
+        # yes
+        #     (ali bo on pobral zaenkrat AND ali je zadnji na vrsti) OR ima on taroke in ostala dva ne
+        #     yes
+        #         RETURN max rank ali vredno karto
+        #
+        #     no
+        #         ali imam jaz možnost pobrat AND ali je ta barva še ni bila odigrana AND ali je counter > 3
+        #         yes
+        #             RETURN max rank
+        #
+        #         no
+        #             RETURN min rank
+        #
+        # no
+        #     ali ta barva še ni bila odigrana AND ali je counter > 3
+        #     yes
+        #         ali imam kralja v tej barvi
+        #         yes
+        #             RETURN king
+        #
+        #         no
+        #             ali je to barva v kateri jaz igram
+        #             yes
+        #                 RETURN max rank
+        #
+        #             no
+        #                 RETURN min rank
+        #
+        #     no
+        #         RETURN min rank
+
+        sh = self.suit_objects[suit]
+        if sh.has_king and not sh.was_already_played and sh.color_count > 3 and not tarot_on_desk:
+            Logs.debug_message(message + "Choosing king " + suit + " because it was not played yet.")
+            return_card = self.get_card_from_alt(suit + self.king_rank)
+            if return_card is not None:
+                return return_card
+            Logs.warning_message(message + "King was maybe allready played?!?")
+
         i = 0
         while i < len(self.cards):
             # works only if cards are sorted
@@ -694,11 +882,44 @@ class WonderfulBot:
             card_to_put_down = self.cards[ltih_index]
             # del (self.cards[ltih_index])
             return card_to_put_down
-        Logs.debug_message(message + "I probably don't have any tarots left, selecting random card...")
-        ran = random.sample(set(non_disabled_card_indexes), 1)[0]
-        Logs.debug_message(message + "Selecting -> " + str(self.cards[ran].alt))
-        # del (self.cards[ran])
-        return self.cards[ran]
+        Logs.debug_message(message + "I probably don't have any tarots left, selecting least valuable card...")
+        sorted_cards = self.cards
+        sorted_cards.sort(key=operator.attrgetter('rank'))
+        Logs.debug_message(message + "Selecting -> " + str(sorted_cards[0].alt))
+        return sorted_cards[0]
+
+    def set_suit_helper_objects_and_tarots(self, table):
+        """
+        Interface method.
+        :param table:
+        :return:
+        """
+        message = "WonderfulBot.set_suit_helper_objects(): "
+        for stack in table:
+            if stack == "stack0":
+                continue
+            if table[stack] is not None or table[stack] != "":
+                if isinstance(table[stack], int):
+                    self.tarot_count -= 1
+                else:
+                    suit = table[stack][0]
+                    self.suit_objects[suit].subtract_color()
+                    Logs.debug_message("SuitHelper New counter for " + suit + " is: " + self.suit_objects[suit].color_count)
+            if table[stack] in self.important_tarots:
+                Logs.debug_message(message + "Removing from important tarots -> " + str(table[stack]))
+                self.important_tarots.remove(table[stack])
+
+    def get_most_or_least_valuable_card(self, rev=False):
+        """
+        :param rev: True for least valuable. False for most valuable
+        :return:
+        """
+        message = "WonderfulBot.get_most_valuable_card(): "
+        Logs.debug_message(message + "Selecting least or most valuable card...")
+        sorted_cards = self.cards
+        sorted_cards.sort(key=operator.attrgetter('rank'), reverse=rev)
+        Logs.debug_message(message + "Selecting -> " + str(sorted_cards[0].alt))
+        return sorted_cards[0]
 
     def check_if_has_tarot_card(self):
         for card in self.cards:
@@ -719,3 +940,55 @@ class WonderfulBot:
             if c.is_tarot:
                 counter += 1
         return counter
+
+    def get_highest_or_lowest_tarot(self, order="H", palcka=False, mond=False):
+        message = "WonderfulBot.get_highest_or_lowest_tarot(): "
+        if order != "H" and order != "L":
+            Logs.error_message(message + "Wrong order command! Changing to 'H'.")
+            order = "H"
+        highest_tarot = (0, None)
+        lowest_tarot = (0, None)
+
+        for c in self.cards:
+            if c.is_tarot:
+                if order == "L" and c.rank < lowest_tarot[0]:
+                    if c.rank == 1 and len(self.cards) > 1:
+                        if palcka or len(self.cards) == 2:
+                            Logs.debug_message(message + "Returning 'I' because of the penalty for the last round")
+                            return c
+                    else:
+                        lowest_tarot = (c.rank, c)
+                elif order == "H" and c.rank > highest_tarot[0]:
+                    if c.rank == 21:
+                        if mond:
+                            Logs.debug_message(message + "Returning 'XXI'")
+                            return c
+                        elif 22 in self.important_tarots and len(self.cards) > 1:
+                            continue
+                    else:
+                        highest_tarot = (c.rank, c)
+
+        if order == "H":
+            return highest_tarot[1]
+        return lowest_tarot[1]
+
+    def get_highest_or_lowest_color(self, suit, order="H"):
+        message = "WonderfulBot.get_highest_or_lowest_color(): "
+        if order != "H" and order != "L":
+            Logs.error_message(message + "Wrong order command! Changing to 'H'.")
+            order = "H"
+        highest_suit = (0, None)
+        lowest_suit = (9, None)
+
+        for c in self.cards:
+            if c.suit == suit:
+                if order == "H" and c.rank > highest_suit[0]:
+                    highest_suit = (c.rank, c)
+                elif order == "L" and c.rank < lowest_suit[0]:
+                    lowest_suit = (c.rank, c)
+
+        if order == "H":
+            return highest_suit[1]
+        return lowest_suit[1]
+
+

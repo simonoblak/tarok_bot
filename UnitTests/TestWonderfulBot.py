@@ -25,8 +25,8 @@ class TestWonderfulBot(unittest.TestCase):
     def initialize_test(self, cards, talon, selected_talon):
         self.cards = self.get_cards_from_alts(cards)
         self.bot.cards = self.cards
-        self.bot.game = len(selected_talon)
         self.bot.init_round()
+        self.bot.game = len(selected_talon)
         self.talon = self.get_cards_from_alts(talon)
         self.chosen_talon = self.get_cards_from_alts(selected_talon)
 
@@ -114,6 +114,46 @@ class TestWonderfulBot(unittest.TestCase):
         # TALON ZALAGANJE
         self.assertEqual(self.talon_zalaganje(), ["♥5", "♠5"])
 
+    def test_case_6(self):
+        self.initialize_test(["♣7", "♥2", "♥4", "♦2", "8", "11", "12", "13", "14", "18", "20", "22"],
+                             ["♦4", "♥7", "♠1", "♠4", "♠2", "♣1"],
+                             ["♥7"])
+
+        # KING
+        suit = self.bot.choose_king()
+        self.assertEqual(suit, "♦")
+        # TALON IZBIRA
+        self.assertEqual(self.bot.choose_talon_step_1(self.bot.game, self.talon), 1)
+        # TALON ZALAGANJE
+        self.assertEqual(self.talon_zalaganje(), ["♣7"])
+
+    def test_case_7(self):
+        self.initialize_test(["♣6", "♥4", "♥7", "♦5", "♠4", "♠7", "12", "13", "14", "18", "20", "22"],
+                             ["1", "♣8", "♦7", "♠3", "♥3", "18"],
+                             ["1", "♣8"])
+
+        # KING
+        suit = self.bot.choose_king()
+
+        self.assertEqual(suit, "♥")
+        # TALON IZBIRA
+        self.assertEqual(self.bot.choose_talon_step_1(self.bot.game, self.talon), 1)
+        # TALON ZALAGANJE
+        self.assertEqual(self.talon_zalaganje(), ["♠4", "♠7"])
+
+    def test_case_8(self):
+        self.initialize_test(["♣2", "♣6", "♥6", "♦1", "♠4", "♠5", "12", "13", "14", "18", "20", "22"],
+                             ["♦4", "12", "7", "♥2", "5", "♣7"],
+                             ["1", "♣8"])
+
+        # KING
+        suit = self.bot.choose_king()
+
+        self.assertEqual(suit, "♣")
+        # TALON IZBIRA
+        self.assertEqual(self.bot.choose_talon_step_1(self.bot.game, self.talon), 1)
+        # # TALON ZALAGANJE
+        # self.assertEqual(self.talon_zalaganje(), ["♠4", "♠7"])
 
 if __name__ == '__main__':
     unittest.main()

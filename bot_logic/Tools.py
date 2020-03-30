@@ -88,9 +88,10 @@ class Tools:
                 suit = self.get_suit(table[player])
                 break
 
+        self.check_for_ally(table)
         card = self.playing_bot.play_card(non_disabled_card_indexes, table, suit)
         if card is None:
-            Logs.error_message(message + "Card is None... No card was played")
+            Logs.error_message(message + "Card is None... No card was played... Selecting Random")
             return random.sample(set(non_disabled_card_indexes), 1)[0]
         Logs.info_message(message + "Played card is -> " + card.alt)
         for i in range(len(self.cards)):
@@ -100,3 +101,16 @@ class Tools:
 
     def get_suit(self, alt):
         return "tarot" if isinstance(alt, int) else alt[0]
+
+    def set_suit_helper_objects_and_tarots(self, table):
+        self.playing_bot.set_suit_helper_objects_and_tarots(table)
+
+    def check_for_ally(self, table):
+        # preverim če jaz igram in če ally še ni bil najden
+        message = "Tools.check_for_ally(): "
+        if self.playing_bot.playing_suite != "" and self.playing_bot.ally != "":
+            for stack in table:
+                if table[stack] is not None or table[stack] != "":
+                    if not isinstance(table[stack], int) and table[stack] == self.playing_bot.playing_suite + "8":
+                        Logs.info_message(message + "Found ally -> " + stack)
+                        self.playing_bot.ally = stack

@@ -11,16 +11,30 @@ class SemiBot:
         self.king_indexes = []
         self.playing_suite = ""
         self.game = -1
+        self.ally = ""
         Logs.init_logs()
 
     def set_cards(self, cards):
+        """
+        Interface method.
+        :param cards:
+        :return:
+        """
         self.cards = cards
 
     def init_round(self):
+        """
+        Interface method.
+        :return:
+        """
         self.playing_suite = ""
         self.king_indexes = []
 
     def choose_king(self):
+        """
+        Interface method.
+        :return:
+        """
         suits = config["suit_signs"].split(",")
         for card in self.cards:
             bad_suit = ""
@@ -39,6 +53,12 @@ class SemiBot:
         return self.playing_suite
 
     def choose_talon_step_1(self, n, talon):
+        """
+        Interface method.
+        :param n:
+        :param talon:
+        :return:
+        """
         message = "SemiBot.choose_talon_step_1(): "
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
         Logs.debug_message(message + "Piles -> " + str(piles))
@@ -54,6 +74,12 @@ class SemiBot:
         return scores.index(max(scores)) * n
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):
+        """
+        Interface method.
+        :param n:
+        :param non_disabled_card_indexes:
+        :return:
+        """
         Logs.debug_message("SemiBot.choose_talon_step_2(): " + str(non_disabled_card_indexes))
         return_cards = []
         random_card_indexes = random.sample(set(non_disabled_card_indexes), n)
@@ -62,6 +88,13 @@ class SemiBot:
         return return_cards
 
     def play_card(self, non_disabled_card_indexes, table, suit):
+        """
+        Interface method.
+        :param non_disabled_card_indexes:
+        :param table:
+        :param suit:
+        :return:
+        """
         message = "SemiBot.play_card(): "
         if suit == "":
             Logs.debug_message(message + "first one, selecting random card...")
@@ -155,3 +188,11 @@ class SemiBot:
             if card.is_tarot:
                 return True
         return False
+
+    def set_suit_helper_objects_and_tarots(self, table):
+        """
+        Interface method.
+        :param table:
+        :return:
+        """
+        return
