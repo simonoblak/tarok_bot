@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from Logs import Logs
+from DatabaseComponent.db import Db
 
 config = Configuration.Configuration().get_config()
 
@@ -37,8 +38,11 @@ class Connector:
         self.player_name = ""
         self.tool = bot_logic.Tools.Tools()
         self.my_bot_playing = False
+        self.rufan = False
+        self.talon_located = False
         self.state = "bid"
         self.online_cards = []
+        self.card_ids = []
         Logs.init_logs()
 
     def init_driver(self):
@@ -93,7 +97,7 @@ class Connector:
 
         try:
             # Create new game
-            self.time_util(20, "pred klikom za novo igro")
+            self.time_util(config["time_to_wait"], "pred klikom za novo igro")
             self.driver.implicitly_wait(3)
             create_new_game = self.driver.find_element_by_id("new")
             self.click_execute(create_new_game)
@@ -130,7 +134,7 @@ class Connector:
             Logs.error_message("No element found in: " + create_game_message)
             raise NoSuchElementException
 
-    def get_cards(self):
+    def get_cards(self, prepare_ids=False):
         get_cards_message = "Connector.get_cards(): "
         Logs.debug_message(get_cards_message + "Getting cards...")
 
@@ -146,6 +150,9 @@ class Connector:
             raise NoSuchElementException
 
         self.tool.convert_online_cards_into_bot_format(alts)
+        if prepare_ids:
+            self.card_ids = self.tool.get_card_ids()
+            self.tool.count_tarots_in_hand_and_color_points()
 
     def choose_game(self):
         choose_game_message = "Connector.choose_game(): "
@@ -235,6 +242,7 @@ class Connector:
                 talon_cards = self.driver.find_element_by_id("talon").find_element_by_class_name("data")\
                     .find_elements_by_css_selector("img")
                 Logs.debug_message(choose_talon_message + "po vrsti karte iz talona")
+                self.talon_located = True
                 for talon_card in talon_cards:
                     Logs.debug_message(talon_card.get_attribute("alt"))
                     talon_online_cards.append(talon_card.get_attribute("alt"))
@@ -264,6 +272,11 @@ class Connector:
             if self.element_located("#talon .data img"):
                 talon = self.driver.find_element_by_id("talon").find_element_by_class_name("data") \
                     .find_elements_by_css_selector("img")
+                Logs.warning_message("Talon located from another player!!!! SUCCESS")
+                self.talon_located = True
+                for talon_card in talon:
+                    Logs.debug_message(talon_card.get_attribute("alt"))
+                    talon_online_cards.append(talon_card.get_attribute("alt"))
 
     def napoved(self):
         napoved_message = "Connector.napoved(): "
@@ -299,9 +312,10 @@ class Connector:
         position_names = config["player_positions"].split(",")
 
         try:
-            # self.is_tarot = True if "tarot" == suit else False    # value_when_true if condition else value_when_false
             rounds_left = 12 if self.is_four_players else 16
-            while rounds_left > 1:
+            while True:
+                if len(self.tool.cards) < 2 or rounds_left < 2:
+                    break
                 # TODO preverji če se je okno za naslednjo rundo pojavu
                 if self.tool.is_my_turn(self.get_timers(2)):
                     table, card_counter = self.get_cards_from_table(player_positions)
@@ -352,6 +366,8 @@ class Connector:
                     break
 
             self.state = "end_game"
+            self.commit_to_database()
+
         except NoSuchElementException:
             Logs.error_message("Error in: " + the_game_message)
             raise NoSuchElementException
@@ -455,6 +471,57 @@ class Connector:
         except NoSuchElementException:
             Logs.error_message("Error in: " + message)
             raise NoSuchElementException
+
+    def commit_to_database(self):
+        Db.connect_to_db()
+        results = self.get_points_from_scores()
+        Logs.debug_message(self.card_ids)
+        self.tool.set_rounds_db(results,
+                                2 if self.my_bot_playing else 1 if self.rufan else 0,
+                                self.talon_located)
+        Db.execute_sql(
+            "INSERT INTO Rounds(bot_name, playing, points, tarot_count, color_points, game, played_suit, game_points, game_diff, bonuses, talon_located, time_stamp) " +
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            self.tool.rounds_db.get_values())
+        Logs.debug_message(Db.get_last_row_id())
+        self.tool.set_roundCards_db(Db.get_last_row_id(), self.card_ids)
+        Db.execute_sql("INSERT INTO RoundCards(round_id, card_id) VALUES (%s, %s)",
+                       self.tool.roundCards_db.get_values(),
+                       True)
+        Db.close_db()
+
+    def get_points_from_scores(self):
+        message = "Connector.get_points_from_scores(): "
+        game_points = 0
+        game_diff = 0
+        bonuses = 0
+        try:
+            data = self.driver.find_elements_by_css_selector("#scores .data table tr")
+            Logs.debug_message(message + "Length of data is: " + str(len(data)))
+            for i, row in enumerate(data):
+                td_elements = row.find_elements_by_css_selector("td")
+                for j, td in enumerate(td_elements):
+                    if td.text != "" or td.text is not None:
+                        val = td.text[1:]
+                        if val.isdigit():
+                            if i == 0:
+                                game_points = self.tool.extract_scores(td.text)
+                            if i == 1:
+                                game_diff = self.tool.extract_scores(td.text)
+                            else:
+                                bonuses += self.tool.extract_scores(td.text)
+
+        except NoSuchElementException:
+            Logs.error_message("Error in: " + message)
+            Logs.warning_message("Could not extract points from Scores!")
+        except TypeError:
+            Logs.error_message("Error in: " + message)
+            Logs.warning_message("Could not extract points from Scores!")
+
+        result = {"game_points": game_points, "game_diff": game_diff, "bonuses": bonuses}
+        Logs.debug_message(message + "Returning values from scores")
+        Logs.debug_message(result)
+        return result
 
     def close_connection(self):
         self.driver.close()

@@ -32,9 +32,9 @@ valat.create_game(config["opponent_bot"])
 valat.time_util(18, "Main Loop")
 
 # GAME
-valat.get_cards()
 while True:
     if valat.state == "bid":
+        valat.get_cards(True)
         valat.choose_game()
     elif valat.state == "call":
         valat.choose_king()

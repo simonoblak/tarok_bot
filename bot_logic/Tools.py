@@ -5,6 +5,8 @@ from bot_logic import SemiBot
 from bot_logic import WonderfulBot
 from Logs import Logs
 import random
+from DatabaseComponent.Rounds import Rounds
+from DatabaseComponent.RoundCards import RoundCards
 
 
 config = Configuration.Configuration().get_config()
@@ -18,7 +20,11 @@ class Tools:
         self.players = []
         self.cards = []
         self.playing_bot = self.create_bot(self.cards)
-        self.game = 0
+        self.game = -1
+        self.tarot_count = 0
+        self.color_points = 0
+        self.rounds_db = Rounds()
+        self.roundCards_db = None
         Logs.init_logs()
 
     def create_bot(self, cards):
@@ -39,6 +45,7 @@ class Tools:
 
     def init_round(self):
         Logs.info_message("Tools.init_round(): initializing and reseting parameters...")
+        self.game = -1
         self.playing_bot.init_round()
 
     def choose_king(self):
@@ -114,3 +121,43 @@ class Tools:
                     if not isinstance(table[stack], int) and table[stack] == self.playing_bot.playing_suite + "8":
                         Logs.info_message(message + "Found ally -> " + stack)
                         self.playing_bot.ally = stack
+
+    def set_roundCards_db(self, round_id, card_ids):
+        self.roundCards_db = RoundCards(round_id, card_ids)
+
+    def get_card_ids(self):
+        return [card.deck_order for card in self.cards]
+
+    def set_rounds_db(self, results, playing, talon_located):
+        self.rounds_db.bot_name = config["playing_bot"]
+        self.rounds_db.playing = playing
+        self.rounds_db.points = results["game_points"] + results["game_diff"]
+        self.rounds_db.tarot_count = self.tarot_count
+        self.rounds_db.color_points = self.color_points
+        self.rounds_db.game = self.game
+        self.rounds_db.played_suit = self.playing_bot.playing_suite
+        self.rounds_db.game_points = results["game_points"]
+        self.rounds_db.game_diff = results["game_diff"]
+        self.rounds_db.bonuses = results["bonuses"]
+        self.rounds_db.talon_located = 1 if talon_located else 0
+        self.rounds_db.time_stamp = Logs.get_timestamp()
+
+    def count_tarots_in_hand_and_color_points(self):
+        tc = 0
+        cp = 0
+        for card in self.cards:
+            if card.is_tarot:
+                tc += 1
+            else:
+                cp += card.points
+        self.tarot_count = tc
+        self.color_points = cp
+        Logs.debug_message("Tools tarot_count(" + str(self.tarot_count) + "), color_points(" + str(self.color_points) + ")")
+
+    def extract_scores(self, score):
+        message = "Tools.extract_scores(): "
+        try:
+            return int(score)
+        except ValueError:
+            Logs.warning_message(message + "Extracting points got wrong.")
+            return -10000

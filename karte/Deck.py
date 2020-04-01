@@ -13,13 +13,26 @@ class Deck:
         lines = [line.rstrip('\n') for line in open(path)]
         for line in lines:
             name, points, rank, suit, deck_order = line.split(";")
-            card = Card.Card(name, int(points), int(rank), suit, deck_order)
+            card = Card.Card(name, int(points), int(rank), suit, int(deck_order))
             Deck.deck.append(card)
         print("Created deck in: " + create_deck_message)
 
     @staticmethod
     def get_deck():
         return Deck.deck
+
+    def get_random_12_ids(self):
+        numbers = []
+        ids = []
+        i = 0
+        while i < 12:
+            ran = random.randint(0, 53)
+            if ran not in numbers:
+                numbers.append(ran)
+                ids.append(Deck().deck[ran].deck_order)
+                i += 1
+
+        return ids
 
     def get_random_12_list_and_talon(self):
         """

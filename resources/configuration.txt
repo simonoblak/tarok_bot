@@ -4,6 +4,8 @@ url=https://valat.si/tarok
 user_config=resources/user_config.txt
 # yes, no
 is_pass_encoded=yes
+# Time to wait for the bot to create a game on valat.si after login
+time_to_wait=20
 
 ##### TABLE SETTINGS
 player_number=4
@@ -13,7 +15,7 @@ player_positions=stack1,stack2,stack3
 
 ##### BOT PARAMETERS
 #RandomBot, SemiBot, WonderfulBot
-playing_bot=WonderfulBot
+playing_bot=SemiBot
 #Vražji, Težek
 opponent_bot=Vražji
 
@@ -21,9 +23,17 @@ opponent_bot=Vražji
 suit_signs=♥,♦,♠,♣
 tarot_count=22
 color_count=8
-# The sma
+# The smallest important tarot
 min_important_tarot=16
 
 ##### LOG SETTINGS
 #debug,info,warning,error
 log_level=debug,info,warning,error
+
+##### DATABASE
+# yes, no
+write_to_database=yes
+host=localhost
+db_user=root
+db_pass=root
+database=valat

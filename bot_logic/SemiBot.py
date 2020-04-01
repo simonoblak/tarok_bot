@@ -35,18 +35,24 @@ class SemiBot:
         Interface method.
         :return:
         """
+        message = "SemiBot.choose_king(): "
         suits = config["suit_signs"].split(",")
         for card in self.cards:
             bad_suit = ""
             if card.is_king:
+                Logs.debug_message(message + "Removing suit: " + card.suit)
                 suits.remove(card.suit)
+
+            # What the actual F*** ?!?!
+            """
             elif not card.is_tarot:
                 for suit in suits:
                     if suit == card.suit:
                         bad_suit = card.suit
                         break
-
+            """
             if bad_suit != "":
+                Logs.debug_message(message + "Removing BAD suit: " + bad_suit)
                 suits.remove(bad_suit)
 
         self.playing_suite = random.choice(suits) if len(suits) > 0 else random.choice(config["suit_signs"].split(","))
