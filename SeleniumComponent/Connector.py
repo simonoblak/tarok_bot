@@ -4,12 +4,13 @@ import Configuration
 import base64
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, StaleElementReferenceException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from Logs import Logs
 from DatabaseComponent.db import Db
+from AdminComponent.Admin import Admin
 
 config = Configuration.Configuration().get_config()
 
@@ -43,6 +44,8 @@ class Connector:
         self.state = "bid"
         self.online_cards = []
         self.card_ids = []
+        self.admin_pause = "set"
+        self.admin = Admin()
         Logs.init_logs()
 
     def init_driver(self):
@@ -212,6 +215,15 @@ class Connector:
             Logs.info_message(choose_king_message + "Ending because not in right state")
             return
 
+        try:
+            if self.driver.find_element_by_id("call").find_element_by_css_selector("h2").text.startswith(self.player_name):
+                self.my_bot_playing = True
+                self.tool.set_bot_game()
+                Logs.info_message(choose_king_message + "I'm playing game -> " + str(self.tool.game))
+        except NoSuchElementException:
+            Logs.error_message("Error in: " + choose_king_message)
+            raise NoSuchElementException
+
         if self.my_bot_playing:
             self.time_util(1, "Izbiramo kralja")
             suite = self.tool.choose_king()
@@ -299,12 +311,12 @@ class Connector:
             raise NoSuchElementException
 
     def the_game(self):
-        the_game_message = "Connector.the_game()"
-        Logs.debug_message(the_game_message + ": Starting game")
+        message = "Connector.the_game()"
+        Logs.debug_message(message + ": Starting game")
         state_name = "game"
 
         if not self.check_state(state_name):
-            Logs.info_message(the_game_message + ": Ending because not in right state")
+            Logs.info_message(message + ": Ending because not in right state")
             return
 
         # stack0 - me, stack1 - right, stack2 - up, stack3 - left
@@ -314,10 +326,13 @@ class Connector:
         try:
             rounds_left = 12 if self.is_four_players else 16
             while True:
+                if self.check_if_reset():
+                    return
                 if len(self.tool.cards) < 2 or rounds_left < 2:
                     break
                 # TODO preverji če se je okno za naslednjo rundo pojavu
                 if self.tool.is_my_turn(self.get_timers(2)):
+                    self.check_for_ally()
                     table, card_counter = self.get_cards_from_table(player_positions)
                     Logs.debug_message("############ TABLE ############")
                     Logs.debug_message(table)
@@ -325,8 +340,11 @@ class Connector:
                     self.get_cards()
                     indexes = self.get_non_disabled_card_indexes()
                     play = self.tool.play_card(indexes, table)
-
-                    table["stack0"] = self.online_cards[play].get_attribute("alt")
+                    try:
+                        table["stack0"] = self.online_cards[play].get_attribute("alt")
+                    except StaleElementReferenceException:
+                        Logs.error_message(message + "selenium.common.exceptions.StaleElementReferenceException: Possible card missing?! skipping round")
+                        continue
                     self.click_execute(self.online_cards[play])
                     rounds_left -= 1
                     Logs.info_message("Rounds Left: " + str(rounds_left))
@@ -343,7 +361,7 @@ class Connector:
                     Logs.debug_message("################################")
                     # Odštejemo števce za karte in preverimo za možnega ally-ja
                     self.tool.set_suit_helper_objects_and_tarots(table)
-                    self.tool.check_for_ally(table)
+                    # self.tool.check_for_ally(table)
 
                     # Reset the map
                     for p in player_positions:
@@ -369,7 +387,7 @@ class Connector:
             self.commit_to_database()
 
         except NoSuchElementException:
-            Logs.error_message("Error in: " + the_game_message)
+            Logs.error_message("Error in: " + message)
             raise NoSuchElementException
 
     def get_non_disabled_card_indexes(self):
@@ -459,18 +477,16 @@ class Connector:
             return False
         return True
 
-    def check_if_set_or_reset(self):
+    def check_if_reset(self):
         message = "Connector.check_if_set_or_reset(): "
-        last_state = ""
-        try:
-            last_text = self.driver.find_element_by_css_selector("#chat .history div span")
-            if last_text == "set" and last_state != "set":
-                self.state = "bid"
-            elif last_text == "reset" and last_state != "reset":
-                self.state = "halt"
-        except NoSuchElementException:
-            Logs.error_message("Error in: " + message)
-            raise NoSuchElementException
+        if self.admin.bot_state == "reset":
+            Logs.info_message(message + "Bot will now wait for your command")
+            while True:
+                time.sleep(1)
+                if self.admin.bot_state == "set":
+                    self.state = "end_game"
+                    return True
+        return False
 
     def commit_to_database(self):
         Db.connect_to_db()
@@ -483,7 +499,9 @@ class Connector:
             "INSERT INTO Rounds(bot_name, playing, points, tarot_count, color_points, game, played_suit, game_points, game_diff, bonuses, talon_located, time_stamp) " +
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             self.tool.rounds_db.get_values())
-        Logs.debug_message(Db.get_last_row_id())
+        last_id = Db.get_last_row_id()
+        Logs.debug_message(last_id)
+        Admin.last_row_id_from_db = last_id
         self.tool.set_roundCards_db(Db.get_last_row_id(), self.card_ids)
         Db.execute_sql("INSERT INTO RoundCards(round_id, card_id) VALUES (%s, %s)",
                        self.tool.roundCards_db.get_values(),
@@ -503,6 +521,8 @@ class Connector:
                 for j, td in enumerate(td_elements):
                     if td.text != "" or td.text is not None:
                         val = td.text[1:]
+                        Logs.debug_message(message + "current 'td.text'")
+                        Logs.debug_message(td.text)
                         if val.isdigit():
                             if i == 0:
                                 game_points = self.tool.extract_scores(td.text)
@@ -513,15 +533,75 @@ class Connector:
 
         except NoSuchElementException:
             Logs.error_message("Error in: " + message)
-            Logs.warning_message("Could not extract points from Scores!")
+            Logs.warning_message("NoSuchElementException: Could not extract points from Scores!")
         except TypeError:
             Logs.error_message("Error in: " + message)
-            Logs.warning_message("Could not extract points from Scores!")
+            Logs.warning_message("TypeError: Could not extract points from Scores!")
 
         result = {"game_points": game_points, "game_diff": game_diff, "bonuses": bonuses}
         Logs.debug_message(message + "Returning values from scores")
         Logs.debug_message(result)
         return result
+
+    def check_for_ally(self):
+        message = "Connector.check_for_ally(): "
+        player_names = config["player_names"].split(",")
+        player_map = {}
+        if self.tool.is_ally_set():
+            return
+        if self.tool.game != 1 and self.tool.game != 2:
+            Logs.debug_message(message + "No need to search for ally. Not known game")
+            return
+        for player_name in player_names:
+            try:
+                spans = self.driver.find_element_by_id(player_name).find_elements_by_css_selector(".bid span")
+                if len(spans) > 0:
+                    player_map[player_name] = spans
+            except NoSuchElementException:
+                Logs.error_message("Error in: " + message)
+                Logs.warning_message("NoSuchElementException: Could not find ally")
+
+        Logs.debug_message(message + "player map")
+        Logs.debug_message(player_map)
+        if len(player_map) == 1:
+            # preverim če moj bot igra al pa če sem rufan
+            possible_ally = list(player_map.keys())[0]
+            if self.my_bot_playing:
+                self.tool.set_ally(possible_ally)
+                return
+
+            alts = [online_card.get_attribute("alt") for online_card in self.online_cards]
+            Logs.debug_message(message + "Printing alts")
+            Logs.debug_message(alts)
+
+            span_list = list(player_map.values())[0]
+
+            player_properties = [s.text for s in span_list]
+            Logs.debug_message(message + "Printing player_properties")
+            Logs.debug_message(player_properties)
+
+            """
+            <div class="bid">
+                <span title="Dve v križu">2</span>
+                <span title="" class="emoji">♣</span>
+            </div>
+            """
+            if player_properties[1] + "8" in alts:
+                Logs.debug_message(message + "Found ally! Rufan")
+                if player_properties[0].isdigit():
+                    self.tool.game = int(player_properties[0])
+                    self.tool.set_bot_game()
+                self.rufan = True
+                self.tool.set_ally(possible_ally)
+                return
+
+        if len(player_map) == 2:
+            for pm in player_map:
+                if pm in player_names:
+                    player_names.remove(pm)
+
+            if len(player_names) == 1:
+                self.tool.set_ally(player_names[0])
 
     def close_connection(self):
         self.driver.close()

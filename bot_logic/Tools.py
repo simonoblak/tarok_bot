@@ -92,21 +92,22 @@ class Tools:
         suit = ""
         for player in config["player_positions"].split(","):
             if table[player] != "":
-                suit = self.get_suit(table[player])
+                suit = self.get_suit_from_alt(table[player])
                 break
 
-        self.check_for_ally(table)
+        # self.check_for_ally(table)
         card = self.playing_bot.play_card(non_disabled_card_indexes, table, suit)
         if card is None:
             Logs.error_message(message + "Card is None... No card was played... Selecting Random")
             return random.sample(set(non_disabled_card_indexes), 1)[0]
         Logs.info_message(message + "Played card is -> " + card.alt)
+        # TODO čekiri za suit_helperje če so že bli odigrane barve in če odštevaš barve in taroke vsako rundo, important_tarots?!?
         for i in range(len(self.cards)):
             if self.cards[i].alt == card.alt:
                 return i
         Logs.error_message(message + "Something is WRONG!!!!!!!!!!!!!!!")
 
-    def get_suit(self, alt):
+    def get_suit_from_alt(self, alt):
         return "tarot" if isinstance(alt, int) else alt[0]
 
     def set_suit_helper_objects_and_tarots(self, table):
@@ -161,3 +162,10 @@ class Tools:
         except ValueError:
             Logs.warning_message(message + "Extracting points got wrong.")
             return -10000
+
+    def set_ally(self, ally):
+        Logs.info_message("Setting ally -> " + ally)
+        self.playing_bot.ally = ally
+
+    def is_ally_set(self):
+        return self.playing_bot.ally != ""

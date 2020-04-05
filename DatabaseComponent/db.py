@@ -1,5 +1,5 @@
-from Logs import Logs
 from Configuration import Configuration
+from Logs import Logs
 
 config = Configuration().get_config()
 
@@ -11,6 +11,7 @@ class Db:
 
     @staticmethod
     def connect_to_db():
+        message = "Db.connect_to_db(): "
         if config["write_to_database"] == "yes":
             try:
                 import mysql.connector
@@ -22,17 +23,21 @@ class Db:
                 )
                 Db.cursor = Db.mydb.cursor()
                 Db.status_connected = True
+                Logs.info_message(message + "Successful connection to database.")
             except ImportError:
                 Logs.error_message("Could not import MYSQL connector")
         else:
             Logs.warning_message("Connection to database turned off.")
 
     @staticmethod
-    def execute_sql(sql, values, multiple=False):
+    def execute_sql(sql, values="", multiple=False):
         if config["write_to_database"] == "yes" and Db.status_connected:
             message = "Db.execute_sql(): "
+            Logs.debug_message(message + "SQL statement -> " + sql)
             try:
-                if multiple:
+                if values == "" or len(values) == 0:
+                    Db.cursor.execute(sql)
+                elif multiple:
                     Db.cursor.executemany(sql, values)
                 else:
                     Db.cursor.execute(sql, values)

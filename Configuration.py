@@ -57,6 +57,12 @@ class Configuration:
             if setting not in allowed_log_settings:
                 errors.append("'" + setting + "' is not allowed in log_level")
 
+        if self.config["write_to_database"] != "yes" and self.config["write_to_database"] != "no":
+            errors.append("'write_to_database' can only have 'yes' or 'no' values")
+
+        if self.config["start_admin"] != "yes" and self.config["start_admin"] != "no":
+            errors.append("'start_admin' can only have 'yes' or 'no' values")
+
         if len(errors) > 0:
             self.pretty_print("fix these errors")
             for e in errors:

@@ -6,15 +6,18 @@ user_config=resources/user_config.txt
 is_pass_encoded=yes
 # Time to wait for the bot to create a game on valat.si after login
 time_to_wait=20
+waiting_for_next_round=12
 
 ##### TABLE SETTINGS
 player_number=4
 not_allowed_games=Valat,Barvni valat,Odprti berač,Berač,Solo tri,Solo dve,Solo ena,Solo brez
 # stack0 - me, stack1 - right, stack2 - up, stack3 - left
 player_positions=stack1,stack2,stack3
+player_names=player1,player2,player3
 
 ##### BOT PARAMETERS
 #RandomBot, SemiBot, WonderfulBot
+all_bots=RandomBot,SemiBot,WonderfulBot
 playing_bot=SemiBot
 #Vražji, Težek
 opponent_bot=Vražji
@@ -37,3 +40,7 @@ host=localhost
 db_user=root
 db_pass=root
 database=valat
+
+##### ADMIN TOOL
+# yes, no
+start_admin=yes
