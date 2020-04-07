@@ -7,6 +7,9 @@ from Logs import Logs
 import random
 from DatabaseComponent.Rounds import Rounds
 from DatabaseComponent.RoundCards import RoundCards
+from DatabaseComponent.MethodOutcomes import MethodOutcomes
+from bot_logic.ColorRanks import ColorRanks
+from bot_logic.PlayingStatus import PlayingStatus
 
 
 config = Configuration.Configuration().get_config()
@@ -15,16 +18,18 @@ config = Configuration.Configuration().get_config()
 class Tools:
     def __init__(self):
         self.deck = Deck.Deck().get_deck()
-        self.played_cards = []
-        self.position_in_talon = 3
-        self.players = []
         self.cards = []
         self.playing_bot = self.create_bot(self.cards)
         self.game = -1
         self.tarot_count = 0
         self.color_points = 0
+        self.suit_of_table = ""
+        self.talon_ids = []
+        self.put_down_ids = []
+        self.playing_status = ""
         self.rounds_db = Rounds()
         self.roundCards_db = None
+        self.methodOutcomes_db = MethodOutcomes()
         Logs.init_logs()
 
     def create_bot(self, cards):
@@ -46,6 +51,15 @@ class Tools:
     def init_round(self):
         Logs.info_message("Tools.init_round(): initializing and reseting parameters...")
         self.game = -1
+        self.tarot_count = 0
+        self.color_points = 0
+        self.suit_of_table = ""
+        self.talon_ids = []
+        self.put_down_ids = []
+        self.playing_status = ""
+        self.rounds_db = Rounds()
+        self.roundCards_db = None
+        self.methodOutcomes_db = MethodOutcomes()
         self.playing_bot.init_round()
 
     def choose_king(self):
@@ -57,6 +71,29 @@ class Tools:
         talon = self.convert_alts_to_cards(online_talon)
         index = self.playing_bot.choose_talon_step_1(self.game, talon)
         Logs.info_message("Tools.choose_talon_step_1(): Card alt -> " + str(talon[index].alt))
+
+        for card in talon:
+            if card.alt == self.playing_bot.playing_suite + ColorRanks.KING:
+                self.playing_status = PlayingStatus.ALONE
+
+        if self.game == 1:
+            self.talon_ids.append(talon[index].deck_order)
+        elif self.game == 2:
+            for i in range(0, 5, 2):
+                if i <= index <= i + 1:
+                    self.talon_ids.append(talon[i].deck_order)
+                    self.talon_ids.append(talon[i + 1].deck_order)
+            """
+            if 0 <= index <= 1:
+                talon_ids.append(talon[0].deck_order)
+                talon_ids.append(talon[1].deck_order)
+            elif 2 <= index <= 3:
+                talon_ids.append(talon[2].deck_order)
+                talon_ids.append(talon[3].deck_order)
+            elif 4 <= index <= 5:
+                talon_ids.append(talon[4].deck_order)
+                talon_ids.append(talon[5].deck_order)
+            """
         return index
 
     def choose_talon_step_2(self, non_disabled_card_indexes):
@@ -65,6 +102,11 @@ class Tools:
         indexes = []
         for returned_card in returned_cards:
             alts_string += returned_card.alt + ", "
+            self.put_down_ids.append(returned_card.deck_order)
+            if returned_card.is_tarot:
+                self.tarot_count += 1
+            else:
+                self.color_points += returned_card.points
             for i, card in enumerate(self.cards):
                 if returned_card.alt == card.alt:
                     indexes.append(i)
@@ -73,8 +115,8 @@ class Tools:
 
     def convert_online_cards_into_bot_format(self, online_cards):
         self.playing_bot.cards = self.cards = self.convert_alts_to_cards(online_cards)
-        for c in self.cards:
-            Logs.debug_message("Tools.convert_online_cards_into_bot_format(): " + c.get_card_name())
+        # for c in self.cards:
+        #     Logs.debug_message("Tools.convert_online_cards_into_bot_format(): " + c.get_card_name())
 
     def convert_alts_to_cards(self, online_cards):
         tab = []
@@ -101,33 +143,28 @@ class Tools:
             Logs.error_message(message + "Card is None... No card was played... Selecting Random")
             return random.sample(set(non_disabled_card_indexes), 1)[0]
         Logs.info_message(message + "Played card is -> " + card.alt)
-        # TODO čekiri za suit_helperje če so že bli odigrane barve in če odštevaš barve in taroke vsako rundo, important_tarots?!?
-        for i in range(len(self.cards)):
-            if self.cards[i].alt == card.alt:
+
+        self.suit_of_table = suit if suit != "" else card.suit
+
+        for i, c in enumerate(self.cards):
+            if c.alt == card.alt:
                 return i
         Logs.error_message(message + "Something is WRONG!!!!!!!!!!!!!!!")
 
     def get_suit_from_alt(self, alt):
         return "tarot" if isinstance(alt, int) else alt[0]
 
-    def set_suit_helper_objects_and_tarots(self, table):
-        self.playing_bot.set_suit_helper_objects_and_tarots(table)
-
-    def check_for_ally(self, table):
-        # preverim če jaz igram in če ally še ni bil najden
-        message = "Tools.check_for_ally(): "
-        if self.playing_bot.playing_suite != "" and self.playing_bot.ally != "":
-            for stack in table:
-                if table[stack] is not None or table[stack] != "":
-                    if not isinstance(table[stack], int) and table[stack] == self.playing_bot.playing_suite + "8":
-                        Logs.info_message(message + "Found ally -> " + stack)
-                        self.playing_bot.ally = stack
-
-    def set_roundCards_db(self, round_id, card_ids):
-        self.roundCards_db = RoundCards(round_id, card_ids)
+    def set_suit_helper_objects_and_tarots(self, table, online_talon=None):
+        talon_cards = None
+        if online_talon is not None:
+            talon_cards = self.convert_alts_to_cards(online_talon)
+        self.playing_bot.set_suit_helper_objects_and_tarots(table, self.suit_of_table, talon_cards)
 
     def get_card_ids(self):
         return [card.deck_order for card in self.cards]
+
+    def set_roundCards_db(self, round_id, card_ids):
+        self.roundCards_db = RoundCards(round_id, card_ids, self.talon_ids, self.put_down_ids)
 
     def set_rounds_db(self, results, playing, talon_located):
         self.rounds_db.bot_name = config["playing_bot"]
@@ -140,8 +177,16 @@ class Tools:
         self.rounds_db.game_points = results["game_points"]
         self.rounds_db.game_diff = results["game_diff"]
         self.rounds_db.bonuses = results["bonuses"]
+        self.rounds_db.ally = self.playing_bot.ally
         self.rounds_db.talon_located = 1 if talon_located else 0
         self.rounds_db.time_stamp = Logs.get_timestamp()
+
+    def set_methodOutcomes_db(self, round_id):
+        self.methodOutcomes_db.round_id = round_id
+        self.methodOutcomes_db.bot_name = config["playing_bot"]
+        self.methodOutcomes_db.choose_king = self.playing_bot.method_outcomes["king"]
+        self.methodOutcomes_db.choose_talon_1 = self.playing_bot.method_outcomes["talon1"]
+        self.methodOutcomes_db.choose_talon_2 = self.playing_bot.method_outcomes["talon2"]
 
     def count_tarots_in_hand_and_color_points(self):
         tc = 0
@@ -151,8 +196,8 @@ class Tools:
                 tc += 1
             else:
                 cp += card.points
-        self.tarot_count = tc
-        self.color_points = cp
+        self.tarot_count += tc
+        self.color_points += cp
         Logs.debug_message("Tools tarot_count(" + str(self.tarot_count) + "), color_points(" + str(self.color_points) + ")")
 
     def extract_scores(self, score):

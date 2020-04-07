@@ -10,6 +10,7 @@ class Rounds:
         self.game_points = None
         self.game_diff = None
         self.bonuses = None
+        self.ally = None
         self.talon_located = None
         self.time_stamp = None
 
@@ -24,5 +25,6 @@ class Rounds:
                 self.game_points,
                 self.game_diff,
                 self.bonuses,
+                self.ally,
                 self.talon_located,
                 self.time_stamp)

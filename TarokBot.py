@@ -11,6 +11,9 @@ SPLOŠNI ZAPISKI
 -   https://en.wikipedia.org/wiki/Tarot_card_games
 
 -   https://stackoverflow.com/questions/4010322/sort-a-list-of-class-instances-python/4010558
+
+šola taroka PREČEKIRI!
+https://www.tarok.net/solataroka.php
 """
 
 config = Configuration.Configuration().get_config()

@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from Logs import Logs
 from DatabaseComponent.db import Db
 from AdminComponent.Admin import Admin
+from bot_logic.PlayingStatus import PlayingStatus
 
 config = Configuration.Configuration().get_config()
 
@@ -41,8 +42,10 @@ class Connector:
         self.my_bot_playing = False
         self.rufan = False
         self.talon_located = False
+        self.talon_subtracted = False
         self.state = "bid"
         self.online_cards = []
+        self.online_alts = []
         self.card_ids = []
         self.admin_pause = "set"
         self.admin = Admin()
@@ -141,20 +144,18 @@ class Connector:
         get_cards_message = "Connector.get_cards(): "
         Logs.debug_message(get_cards_message + "Getting cards...")
 
-        alts = []
         try:
             self.online_cards = self.driver.find_element_by_id("cards").find_elements_by_css_selector("img")
             for online_card in self.online_cards:
                 alt = online_card.get_attribute("alt")
-                alts.append(alt)
+                self.online_alts.append(alt)
                 Logs.debug_message(get_cards_message + "Added -> " + alt)
         except NoSuchElementException:
             Logs.error_message("No element found in: " + get_cards_message)
             raise NoSuchElementException
 
-        self.tool.convert_online_cards_into_bot_format(alts)
+        self.tool.convert_online_cards_into_bot_format(self.online_alts)
         if prepare_ids:
-            self.card_ids = self.tool.get_card_ids()
             self.tool.count_tarots_in_hand_and_color_points()
 
     def choose_game(self):
@@ -163,6 +164,7 @@ class Connector:
         state_name = "bid"
         self.my_bot_playing = False
         self.tool.init_round()
+        self.card_ids = self.tool.get_card_ids()
 
         while True:
             my_turn = self.tool.is_my_turn(self.get_timers(1))
@@ -238,12 +240,12 @@ class Connector:
             self.time_util(1, "Čakamo da drug igralec izbere kralja")
 
     def choose_talon(self):
-        choose_talon_message = "Connector.choose_talon(): "
-        Logs.debug_message(choose_talon_message + "Choosing talon")
+        message = "Connector.choose_talon(): "
+        Logs.debug_message(message + "Choosing talon")
         state_name = "talon"
 
         if not self.check_state(state_name):
-            Logs.info_message(choose_talon_message + "Ending because not in right state")
+            Logs.info_message(message + "Ending because not in right state")
             return
 
         talon_online_cards = []
@@ -253,7 +255,7 @@ class Connector:
                 # Step 1 - izbira talona
                 talon_cards = self.driver.find_element_by_id("talon").find_element_by_class_name("data")\
                     .find_elements_by_css_selector("img")
-                Logs.debug_message(choose_talon_message + "po vrsti karte iz talona")
+                Logs.debug_message(message + "po vrsti karte iz talona")
                 self.talon_located = True
                 for talon_card in talon_cards:
                     Logs.debug_message(talon_card.get_attribute("alt"))
@@ -272,12 +274,12 @@ class Connector:
                 Logs.debug_message(disposed_cards_index)
                 Logs.debug_message("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
                 for card_index in disposed_cards_index:
-                    Logs.info_message(choose_talon_message + "Card put down -> " +
+                    Logs.info_message(message + "Card put down -> " +
                                       self.online_cards[card_index].get_attribute("alt"))
                     self.click_execute(self.online_cards[card_index])
                     self.time_util(1, "Waiting for another card to put down...")
             except NoSuchElementException:
-                Logs.error_message("Error in: " + choose_talon_message)
+                Logs.error_message("Error in: " + message)
                 raise NoSuchElementException
         else:
             self.time_util(1, "Izbira talona od drugega igralca")
@@ -286,9 +288,18 @@ class Connector:
                     .find_elements_by_css_selector("img")
                 Logs.warning_message("Talon located from another player!!!! SUCCESS")
                 self.talon_located = True
-                for talon_card in talon:
-                    Logs.debug_message(talon_card.get_attribute("alt"))
-                    talon_online_cards.append(talon_card.get_attribute("alt"))
+                try:
+                    for talon_card in talon:
+                        Logs.debug_message(talon_card.get_attribute("alt"))
+                        if "disabled" in talon_card.get_attribute("class"):
+                            Logs.debug_message(message + "Card '" + talon_card.get_attribute("alt") + "' was added to talon_online_cards")
+                            talon_online_cards.append(talon_card.get_attribute("alt"))
+                except StaleElementReferenceException:
+                    Logs.error_message("Stale element reference: element is not attached to the page document")
+                if len(talon_online_cards) > 0 and not self.talon_subtracted:
+                    self.tool.set_suit_helper_objects_and_tarots(None, talon_online_cards)
+                    self.talon_subtracted = True
+
 
     def napoved(self):
         napoved_message = "Connector.napoved(): "
@@ -351,9 +362,10 @@ class Connector:
 
                     for position in position_names:
                         if table[position] == "" and card_counter > 0 and self.element_located("#" + position + " img"):
-                            table[position] = self.driver.find_element_by_id(position)\
+                            alt = self.driver.find_element_by_id(position)\
                                 .find_elements_by_css_selector("img")[0]\
                                 .get_attribute("alt")
+                            table[position] = int(alt) if alt.isdigit() else alt
                             card_counter -= 1
 
                     Logs.debug_message("####### WHOLE TABLE ############")
@@ -385,6 +397,8 @@ class Connector:
 
             self.state = "end_game"
             self.commit_to_database()
+            self.talon_subtracted = False
+            self.rufan = False
 
         except NoSuchElementException:
             Logs.error_message("Error in: " + message)
@@ -492,20 +506,28 @@ class Connector:
         Db.connect_to_db()
         results = self.get_points_from_scores()
         Logs.debug_message(self.card_ids)
+        p_status = ""
+        if self.tool.playing_status != PlayingStatus.ALONE:
+            p_status = PlayingStatus.PLAYING if self.my_bot_playing else PlayingStatus.RUFAN if self.rufan else PlayingStatus.NO
         self.tool.set_rounds_db(results,
-                                2 if self.my_bot_playing else 1 if self.rufan else 0,
+                                p_status,
                                 self.talon_located)
         Db.execute_sql(
-            "INSERT INTO Rounds(bot_name, playing, points, tarot_count, color_points, game, played_suit, game_points, game_diff, bonuses, talon_located, time_stamp) " +
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO Rounds(bot_name, playing, points, tarot_count, color_points, game, played_suit, game_points, game_diff, bonuses, ally, talon_located, time_stamp) " +
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             self.tool.rounds_db.get_values())
         last_id = Db.get_last_row_id()
         Logs.debug_message(last_id)
-        Admin.last_row_id_from_db = last_id
+        self.admin.last_row_id_from_db = last_id
         self.tool.set_roundCards_db(Db.get_last_row_id(), self.card_ids)
-        Db.execute_sql("INSERT INTO RoundCards(round_id, card_id) VALUES (%s, %s)",
+        Db.execute_sql("INSERT INTO RoundCards(round_id, card_id, is_talon, put_down) VALUES (%s, %s, %s, %s)",
                        self.tool.roundCards_db.get_values(),
                        True)
+        if self.my_bot_playing:
+            self.tool.set_methodOutcomes_db(last_id)
+            Db.execute_sql("INSERT INTO MethodOutcomes(round_id, bot_name, choose_king, choose_talon_1, choose_talon_2)" +
+                           "VALUES (%s, %s, %s, %s, %s)",
+                           self.tool.methodOutcomes_db.get_values())
         Db.close_db()
 
     def get_points_from_scores(self):
@@ -518,7 +540,7 @@ class Connector:
             Logs.debug_message(message + "Length of data is: " + str(len(data)))
             for i, row in enumerate(data):
                 td_elements = row.find_elements_by_css_selector("td")
-                for j, td in enumerate(td_elements):
+                for td in td_elements:
                     if td.text != "" or td.text is not None:
                         val = td.text[1:]
                         Logs.debug_message(message + "current 'td.text'")
@@ -528,7 +550,7 @@ class Connector:
                                 game_points = self.tool.extract_scores(td.text)
                             if i == 1:
                                 game_diff = self.tool.extract_scores(td.text)
-                            else:
+                            if i >= 2:
                                 bonuses += self.tool.extract_scores(td.text)
 
         except NoSuchElementException:
@@ -549,30 +571,32 @@ class Connector:
         player_map = {}
         if self.tool.is_ally_set():
             return
-        if self.tool.game != 1 and self.tool.game != 2:
-            Logs.debug_message(message + "No need to search for ally. Not known game")
-            return
         for player_name in player_names:
             try:
                 spans = self.driver.find_element_by_id(player_name).find_elements_by_css_selector(".bid span")
                 if len(spans) > 0:
                     player_map[player_name] = spans
+                    red_class = spans[0].find_elements_by_css_selector("span[class='red']")
+                    Logs.debug_message(message + "red_class = spans[0].find_elements_by_css_selector('span[class='red']')")
+                    Logs.debug_message(red_class)
+                    if red_class is not None and len(red_class) > 0:
+                        self.tool.playing_status = PlayingStatus.ALONE
+
             except NoSuchElementException:
                 Logs.error_message("Error in: " + message)
                 Logs.warning_message("NoSuchElementException: Could not find ally")
 
         Logs.debug_message(message + "player map")
-        Logs.debug_message(player_map)
+        Logs.debug_message(player_map.keys())
         if len(player_map) == 1:
             # preverim če moj bot igra al pa če sem rufan
             possible_ally = list(player_map.keys())[0]
             if self.my_bot_playing:
-                self.tool.set_ally(possible_ally)
+                self.tool.set_ally("stack" + possible_ally[-1])
                 return
 
-            alts = [online_card.get_attribute("alt") for online_card in self.online_cards]
             Logs.debug_message(message + "Printing alts")
-            Logs.debug_message(alts)
+            Logs.debug_message(self.online_alts)
 
             span_list = list(player_map.values())[0]
 
@@ -586,22 +610,23 @@ class Connector:
                 <span title="" class="emoji">♣</span>
             </div>
             """
-            if player_properties[1] + "8" in alts:
+            if player_properties[1] + "8" in self.online_alts:
                 Logs.debug_message(message + "Found ally! Rufan")
                 if player_properties[0].isdigit():
                     self.tool.game = int(player_properties[0])
                     self.tool.set_bot_game()
                 self.rufan = True
-                self.tool.set_ally(possible_ally)
+                self.tool.set_ally("stack" + possible_ally[-1])
                 return
 
         if len(player_map) == 2:
+            Logs.debug_message(message + "Found two players in ally check")
             for pm in player_map:
                 if pm in player_names:
                     player_names.remove(pm)
 
             if len(player_names) == 1:
-                self.tool.set_ally(player_names[0])
+                self.tool.set_ally("stack" + player_names[0][-1])
 
     def close_connection(self):
         self.driver.close()

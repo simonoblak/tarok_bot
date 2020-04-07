@@ -11,6 +11,7 @@ class RandomBot:
         self.playing_suite = ""
         self.game = -1
         self.ally = ""
+        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
 
     def set_cards(self, cards):
         """
@@ -76,10 +77,12 @@ class RandomBot:
         """
         return self.cards[random.sample(set(non_disabled_card_indexes), 1)[0]]
 
-    def set_suit_helper_objects_and_tarots(self, table):
+    def set_suit_helper_objects_and_tarots(self, table, suit_of_table, talon_cards):
         """
-        Interface method.
+        Interface method
         :param table:
+        :param suit_of_table:
+        :param talon_cards:
         :return:
         """
         return

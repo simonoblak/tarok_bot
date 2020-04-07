@@ -71,7 +71,7 @@ class Admin(threading.Thread):
         if not corrupted_round.isdigit() and int(corrupted_round) <= 0:
             self.info_label.configure(text="Input must be a positive int", foreground=self.default_error_color)
             return
-        Admin.set_ID_to_corrupted(corrupted_round)
+        self.set_ID_to_corrupted(corrupted_round)
 
     def run(self):
         message = "Admin.run(): "

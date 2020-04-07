@@ -18,7 +18,7 @@ player_names=player1,player2,player3
 ##### BOT PARAMETERS
 #RandomBot, SemiBot, WonderfulBot
 all_bots=RandomBot,SemiBot,WonderfulBot
-playing_bot=SemiBot
+playing_bot=WonderfulBot
 #Vražji, Težek
 opponent_bot=Vražji
 

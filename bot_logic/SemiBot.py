@@ -12,6 +12,7 @@ class SemiBot:
         self.playing_suite = ""
         self.game = -1
         self.ally = ""
+        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
         Logs.init_logs()
 
     def set_cards(self, cards):
@@ -195,10 +196,12 @@ class SemiBot:
                 return True
         return False
 
-    def set_suit_helper_objects_and_tarots(self, table):
+    def set_suit_helper_objects_and_tarots(self, table, suit_of_table, talon_cards):
         """
-        Interface method.
+        Interface method
         :param table:
+        :param suit_of_table:
+        :param talon_cards:
         :return:
         """
         return
