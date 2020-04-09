@@ -67,7 +67,7 @@ class RandomBot:
             return_cards.append(self.cards[i])
         return return_cards
 
-    def play_card(self, non_disabled_card_indexes, table, suite):
+    def play_card(self, non_disabled_card_indexes, table, suite, playing_status):
         """
         Interface method.
         :param non_disabled_card_indexes:

@@ -140,10 +140,11 @@ class Connector:
             Logs.error_message("No element found in: " + create_game_message)
             raise NoSuchElementException
 
-    def get_cards(self, prepare_ids=False):
+    def get_cards(self):
         get_cards_message = "Connector.get_cards(): "
         Logs.debug_message(get_cards_message + "Getting cards...")
 
+        self.online_alts = []
         try:
             self.online_cards = self.driver.find_element_by_id("cards").find_elements_by_css_selector("img")
             for online_card in self.online_cards:
@@ -155,8 +156,6 @@ class Connector:
             raise NoSuchElementException
 
         self.tool.convert_online_cards_into_bot_format(self.online_alts)
-        if prepare_ids:
-            self.tool.count_tarots_in_hand_and_color_points()
 
     def choose_game(self):
         choose_game_message = "Connector.choose_game(): "
@@ -197,6 +196,7 @@ class Connector:
                 if self.state == "call":
                     if self.driver.find_element_by_id("call").find_element_by_css_selector("h2").text.startswith(self.player_name):
                         self.my_bot_playing = True
+                        self.tool.set_playing_status(PlayingStatus.PLAYING)
                         self.tool.set_bot_game()
                         Logs.info_message(choose_game_message + "I'm playing game -> " + str(self.tool.game))
                     choose_over = True
@@ -266,13 +266,9 @@ class Connector:
                 # Step 2 - Zalaganje
                 self.time_util(1)
                 self.get_cards()
+                self.tool.count_tarots_in_hand_and_color_points()
                 non_disabled_card_indexes = self.get_non_disabled_card_indexes()
-                Logs.debug_message("$$$$$$$$$$ Non disabled card indexes $$$$$$$$$$$$")
-                Logs.debug_message(non_disabled_card_indexes)
                 disposed_cards_index = self.tool.choose_talon_step_2(non_disabled_card_indexes)
-                Logs.debug_message("$$$$$$$$$$ disposed_cards_index $$$$$$$$$$$$")
-                Logs.debug_message(disposed_cards_index)
-                Logs.debug_message("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
                 for card_index in disposed_cards_index:
                     Logs.info_message(message + "Card put down -> " +
                                       self.online_cards[card_index].get_attribute("alt"))
@@ -283,6 +279,7 @@ class Connector:
                 raise NoSuchElementException
         else:
             self.time_util(1, "Izbira talona od drugega igralca")
+            self.tool.count_tarots_in_hand_and_color_points()
             if self.element_located("#talon .data img"):
                 talon = self.driver.find_element_by_id("talon").find_element_by_class_name("data") \
                     .find_elements_by_css_selector("img")
@@ -384,15 +381,18 @@ class Connector:
                 self.get_cards()
                 if len(self.tool.cards) == 0:
                     # Get last cards from table, valat.si automaticaly plays the last card for you so just get from table
+                    self.check_for_ally()
                     for position in player_positions:
                         if player_positions[position] == "" and self.element_located("#" + position + " img"):
-                            player_positions[position] = self.driver.find_element_by_id(position) \
+                            alt = self.driver.find_element_by_id(position) \
                                 .find_elements_by_css_selector("img")[0] \
                                 .get_attribute("alt")
+                            player_positions[position] = int(alt) if alt.isdigit() else alt
 
                     Logs.debug_message("####### LAST CARDS FOR WHOLE TABLE ############")
                     Logs.debug_message(player_positions)
                     Logs.debug_message("###############################################")
+                    self.tool.set_suit_helper_objects_and_tarots(player_positions)
                     break
 
             self.state = "end_game"
@@ -408,8 +408,6 @@ class Connector:
         indexes = []
         for i in range(0, len(self.online_cards)):
             self.driver.implicitly_wait(1)
-            Logs.debug_message(self.online_cards[i].get_attribute("alt"))
-            Logs.debug_message(self.online_cards[i].get_attribute("class"))
             if "disabled" not in self.online_cards[i].get_attribute("class"):
                 indexes.append(i)
 
@@ -506,12 +504,7 @@ class Connector:
         Db.connect_to_db()
         results = self.get_points_from_scores()
         Logs.debug_message(self.card_ids)
-        p_status = ""
-        if self.tool.playing_status != PlayingStatus.ALONE:
-            p_status = PlayingStatus.PLAYING if self.my_bot_playing else PlayingStatus.RUFAN if self.rufan else PlayingStatus.NO
-        self.tool.set_rounds_db(results,
-                                p_status,
-                                self.talon_located)
+        self.tool.set_rounds_db(results, self.talon_located)
         Db.execute_sql(
             "INSERT INTO Rounds(bot_name, playing, points, tarot_count, color_points, game, played_suit, game_points, game_diff, bonuses, ally, talon_located, time_stamp) " +
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
@@ -576,8 +569,9 @@ class Connector:
                 spans = self.driver.find_element_by_id(player_name).find_elements_by_css_selector(".bid span")
                 if len(spans) > 0:
                     player_map[player_name] = spans
-                    red_class = spans[0].find_elements_by_css_selector("span[class='red']")
-                    Logs.debug_message(message + "red_class = spans[0].find_elements_by_css_selector('span[class='red']')")
+                    red_class = self.driver.find_element_by_id(player_name).find_elements_by_css_selector(".bid span[class='red']")
+
+                    Logs.debug_message(message + "red_class = spans[0].find_elements_by_css_selector(#" + player_name + " .bid span[class='red'])")
                     Logs.debug_message(red_class)
                     if red_class is not None and len(red_class) > 0:
                         self.tool.playing_status = PlayingStatus.ALONE
@@ -591,7 +585,7 @@ class Connector:
         if len(player_map) == 1:
             # preverim če moj bot igra al pa če sem rufan
             possible_ally = list(player_map.keys())[0]
-            if self.my_bot_playing:
+            if self.my_bot_playing and possible_ally != "":
                 self.tool.set_ally("stack" + possible_ally[-1])
                 return
 
@@ -610,21 +604,41 @@ class Connector:
                 <span title="" class="emoji">♣</span>
             </div>
             """
-            if player_properties[1] + "8" in self.online_alts:
+            if player_properties[0].isdigit() and player_properties[1] + "8" in self.online_alts:
                 Logs.debug_message(message + "Found ally! Rufan")
                 if player_properties[0].isdigit():
                     self.tool.game = int(player_properties[0])
                     self.tool.set_bot_game()
+                    self.tool.set_playing_suit(player_properties[1])
                 self.rufan = True
+                self.tool.set_playing_status(PlayingStatus.RUFAN)
                 self.tool.set_ally("stack" + possible_ally[-1])
                 return
 
         if len(player_map) == 2:
             Logs.debug_message(message + "Found two players in ally check")
+            is_game_number_found = False
+            playing_game = 0
+            playing_suit = ""
             for pm in player_map:
+                player_properties = [s.text for s in player_map[pm]]
+                Logs.debug_message(message + "Printing player_properties")
+                Logs.debug_message(player_properties)
+
+                for pp in player_properties:
+                    if pp.isdigit():
+                        is_game_number_found = True
+                        playing_game = int(pp)
+                    elif pp in config["suit_signs"].split(","):
+                        playing_suit = pp
+
                 if pm in player_names:
                     player_names.remove(pm)
 
+            if is_game_number_found:
+                self.tool.game = playing_game
+                self.tool.set_bot_game()
+                self.tool.set_playing_suit(playing_suit)
             if len(player_names) == 1:
                 self.tool.set_ally("stack" + player_names[0][-1])
 

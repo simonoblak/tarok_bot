@@ -30,6 +30,9 @@ class SemiBot:
         """
         self.playing_suite = ""
         self.king_indexes = []
+        self.game = -1
+        self.ally = ""
+        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
 
     def choose_king(self):
         """
@@ -94,7 +97,7 @@ class SemiBot:
             return_cards.append(self.cards[i])
         return return_cards
 
-    def play_card(self, non_disabled_card_indexes, table, suit):
+    def play_card(self, non_disabled_card_indexes, table, suit, playing_status):
         """
         Interface method.
         :param non_disabled_card_indexes:

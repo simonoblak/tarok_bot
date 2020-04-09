@@ -12,9 +12,11 @@ SPLOŠNI ZAPISKI
 
 -   https://stackoverflow.com/questions/4010322/sort-a-list-of-class-instances-python/4010558
 
-šola taroka PREČEKIRI!
-https://www.tarok.net/solataroka.php
 """
+
+#TODO
+# šola taroka PREČEKIRI!
+# https://www.tarok.net/solataroka.php
 
 config = Configuration.Configuration().get_config()
 
@@ -43,7 +45,6 @@ def tarok_bot():
             valat.choose_king()
         elif valat.state == "talon":
             valat.choose_talon()
-            valat.get_cards(True)
         elif valat.state == "bonus":
             valat.napoved()
         elif valat.state == "game":
