@@ -6,9 +6,9 @@ import operator
 from Logs import Logs
 from math import ceil
 from players.Player import Player
-from bot_logic.AllyWin import AllyWin
-from bot_logic.CardRanks import CardRanks
-from bot_logic.PlayingStatus import PlayingStatus
+from ProjectConstants.AllyWin import AllyWin
+from ProjectConstants.CardRanks import CardRanks
+from ProjectConstants.PlayingStatus import PlayingStatus
 
 config = Configuration.Configuration().get_config()
 # TODO razširi bazo tako da boš vsak primer (vsak return) si zapisal kolikokrat se je zgodil. npr. z številkami označi in s komentarjem zapiši še kej

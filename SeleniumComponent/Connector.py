@@ -11,8 +11,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from Logs import Logs
 from DatabaseComponent.db import Db
 from AdminComponent.Admin import Admin
-from bot_logic.PlayingStatus import PlayingStatus
-from bot_logic.CardRanks import CardRanks
+from ProjectConstants.PlayingStatus import PlayingStatus
+from ProjectConstants.CardRanks import CardRanks
 
 config = Configuration.Configuration().get_config()
 

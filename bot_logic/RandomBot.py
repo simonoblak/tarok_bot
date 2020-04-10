@@ -1,6 +1,6 @@
 import Configuration
 import random
-from bot_logic.CardRanks import CardRanks
+from ProjectConstants.CardRanks import CardRanks
 
 config = Configuration.Configuration().get_config()
 

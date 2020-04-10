@@ -8,8 +8,8 @@ import random
 from DatabaseComponent.Rounds import Rounds
 from DatabaseComponent.RoundCards import RoundCards
 from DatabaseComponent.MethodOutcomes import MethodOutcomes
-from bot_logic.CardRanks import CardRanks
-from bot_logic.PlayingStatus import PlayingStatus
+from ProjectConstants.CardRanks import CardRanks
+from ProjectConstants.PlayingStatus import PlayingStatus
 
 
 config = Configuration.Configuration().get_config()

@@ -1,4 +1,4 @@
-from TerminalColors import TerminalColors
+from ProjectConstants.TerminalColors import TerminalColors
 from datetime import datetime
 import Configuration
 
