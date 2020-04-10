@@ -1,7 +1,7 @@
 import Configuration
 from karte import Deck
 from bot_logic import RandomBot
-from bot_logic import SemiBot
+from bot_logic import SimpleBot
 from bot_logic import WonderfulBot
 from Logs import Logs
 import random
@@ -37,8 +37,8 @@ class Tools:
         Logs.debug_message("Playing bot: " + bot_name)
         if bot_name == "RandomBot":
             return RandomBot.RandomBot(cards)
-        elif bot_name == "SemiBot":
-            return SemiBot.SemiBot(cards)
+        elif bot_name == "SimpleBot":
+            return SimpleBot.SimpleBot(cards)
         elif bot_name == "WonderfulBot":
             return WonderfulBot.WonderfulBot(cards)
 
@@ -65,7 +65,7 @@ class Tools:
     def choose_king(self):
         suite = self.playing_bot.choose_king()
         Logs.info_message("Tools.choose_king(): Suit -> " + suite)
-        return suite + "8"
+        return suite + CardRanks.KING
 
     def choose_talon_step_1(self, online_talon):
         talon = self.convert_alts_to_cards(online_talon)

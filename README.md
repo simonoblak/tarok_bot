@@ -14,4 +14,4 @@ Startup:
 <br/>
 <img src="resources/TarokBot.svg" alt="schema">
 <br/>
-<p>Version 0.8<br/>Random and Semi bot work</p>
+<p>Version 0.8<br/>All bots work now</p>

@@ -16,8 +16,8 @@ player_positions=stack1,stack2,stack3
 player_names=player1,player2,player3
 
 ##### BOT PARAMETERS
-#RandomBot, SemiBot, WonderfulBot
-all_bots=RandomBot,SemiBot,WonderfulBot
+#RandomBot, SimpleBot, WonderfulBot
+all_bots=RandomBot,SimpleBot,WonderfulBot
 playing_bot=WonderfulBot
 #Vražji, Težek
 opponent_bot=Vražji

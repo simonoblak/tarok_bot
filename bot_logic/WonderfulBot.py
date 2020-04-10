@@ -80,9 +80,6 @@ class WonderfulBot:
         Interface method.
         :return:
         """
-        # TODO poklič init round na začetku vsake runde, ne pa šele pri choose king
-        # self.init_round()
-
         message = "WonderfulBot.choose_king(): "
         suits = config["suit_signs"].split(",")
         no_king_suits = config["suit_signs"].split(",")
@@ -546,17 +543,17 @@ class WonderfulBot:
                     return [ps_list[1]]
 
                 # Najprej poiščemo suit, ki se je najmanjkrat pojavil v talonu in v roki in ki ga imam v roki
-                suit_with_min_cards = 8
+                suit_with_min_cards = (8, "")
                 for s in suit_counter:
-                    if suit_counter[s].color_count != 8 and suit_counter[s].color_count < suit_with_min_cards:
-                        suit_with_min_cards = s
+                    if suit_counter[s].color_count != 8 and suit_counter[s].color_count < suit_with_min_cards[0]:
+                        suit_with_min_cards = (suit_counter[s].color_count, s)
                 # suit_with_min_cards = max(suit_counter, key=operator.attrgetter('color_count'))
                 swmc_list = self.get_cards_from_suit(suit_with_min_cards)
-
-                # Vrnemo karto, ki ima največ točk in ki ni kralj.
-                for c in swmc_list:
-                    if not c.is_king:
-                        return [c]
+                if len(swmc_list) > 0:
+                    # Vrnemo karto, ki ima največ točk in ki ni kralj.
+                    for c in swmc_list:
+                        if not c.is_king:
+                            return [c]
 
             if self.game == 2:
                 if len(two_card_suits) == 1:
@@ -908,6 +905,7 @@ class WonderfulBot:
             RETURN max tarot
 
         RETURN min tarot, lowest valued
+
         :param table:
         :param suit:
         :param non_disabled_card_indexes:
@@ -985,7 +983,7 @@ class WonderfulBot:
             if suit != "tarot":
                 if self.does_ally_win_color(table, suit):
                     # Preverim če pobere z kraljem
-                    if "8" in table[self.ally]:
+                    if CardRanks.KING in table[self.ally]:
                         Logs.debug_message(message + "Ally wins with KING")
                         return True, AllyWin.KING
                     Logs.debug_message(message + "Ally wins with COLOR")
@@ -1072,6 +1070,7 @@ class WonderfulBot:
         Logs.debug_message(message + "Selecting least or most valuable card..." + rev.__str__())
         sorted_cards = self.cards
         sorted_cards.sort(key=operator.attrgetter('rank'), reverse=rev)
+        Logs.debug_message(message + str([c.alt for c in sorted_cards]))
         Logs.debug_message(message + "Selecting -> " + str(sorted_cards[0].alt))
         return sorted_cards[0]
 

@@ -1,5 +1,6 @@
 import Configuration
 import random
+from bot_logic.CardRanks import CardRanks
 
 config = Configuration.Configuration().get_config()
 
@@ -28,6 +29,9 @@ class RandomBot:
         """
         self.playing_suite = ""
         self.king_indexes = []
+        self.game = -1
+        self.ally = ""
+        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
 
     def choose_king(self):
         """
@@ -49,7 +53,7 @@ class RandomBot:
         :return:
         """
         for index, card in enumerate(talon):
-            if card.alt == self.playing_suite + "8":
+            if card.alt == self.playing_suite + CardRanks.KING:
                 return index
 
         return talon.index(random.choice(talon))

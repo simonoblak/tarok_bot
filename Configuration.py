@@ -35,9 +35,9 @@ class Configuration:
             errors.append("opponent_bot can only be 'Vražji' or 'Težek'")
 
         if not self.config["playing_bot"] == "RandomBot" \
-                and not self.config["playing_bot"] == "SemiBot" \
+                and not self.config["playing_bot"] == "SimpleBot" \
                 and not self.config["playing_bot"] == "WonderfulBot":
-            errors.append("playing_bot can only be 'RandomBot' or 'SemiBot' or 'WonderfulBot'")
+            errors.append("playing_bot can only be 'RandomBot' or 'SimpleBot' or 'WonderfulBot'")
 
         not_allowed_games = ["Valat", "Barvni valat", "Odprti berač", "Berač",
                              "Solo tri", "Solo dve", "Solo ena", "Solo brez"]

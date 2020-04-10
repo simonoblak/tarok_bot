@@ -12,6 +12,7 @@ from Logs import Logs
 from DatabaseComponent.db import Db
 from AdminComponent.Admin import Admin
 from bot_logic.PlayingStatus import PlayingStatus
+from bot_logic.CardRanks import CardRanks
 
 config = Configuration.Configuration().get_config()
 
@@ -513,7 +514,7 @@ class Connector:
         Logs.debug_message(last_id)
         self.admin.last_row_id_from_db = last_id
         self.tool.set_roundCards_db(Db.get_last_row_id(), self.card_ids)
-        Db.execute_sql("INSERT INTO RoundCards(round_id, card_id, is_talon, put_down) VALUES (%s, %s, %s, %s)",
+        Db.execute_sql("INSERT INTO RoundCards(round_id, card_id, is_from_talon, put_down) VALUES (%s, %s, %s, %s)",
                        self.tool.roundCards_db.get_values(),
                        True)
         if self.my_bot_playing:
@@ -604,7 +605,7 @@ class Connector:
                 <span title="" class="emoji">♣</span>
             </div>
             """
-            if player_properties[0].isdigit() and player_properties[1] + "8" in self.online_alts:
+            if player_properties[0].isdigit() and player_properties[1] + CardRanks.KING in self.online_alts:
                 Logs.debug_message(message + "Found ally! Rufan")
                 if player_properties[0].isdigit():
                     self.tool.game = int(player_properties[0])

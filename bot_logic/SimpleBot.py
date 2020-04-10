@@ -5,7 +5,7 @@ from Logs import Logs
 config = Configuration.Configuration().get_config()
 
 
-class SemiBot:
+class SimpleBot:
     def __init__(self, cards):
         self.cards = cards
         self.king_indexes = []
@@ -39,7 +39,7 @@ class SemiBot:
         Interface method.
         :return:
         """
-        message = "SemiBot.choose_king(): "
+        message = "SimpleBot.choose_king(): "
         suits = config["suit_signs"].split(",")
         for card in self.cards:
             bad_suit = ""
@@ -69,7 +69,7 @@ class SemiBot:
         :param talon:
         :return:
         """
-        message = "SemiBot.choose_talon_step_1(): "
+        message = "SimpleBot.choose_talon_step_1(): "
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
         Logs.debug_message(message + "Piles -> " + str(piles))
         scores = [0] * piles
@@ -90,7 +90,7 @@ class SemiBot:
         :param non_disabled_card_indexes:
         :return:
         """
-        Logs.debug_message("SemiBot.choose_talon_step_2(): " + str(non_disabled_card_indexes))
+        Logs.debug_message("SimpleBot.choose_talon_step_2(): " + str(non_disabled_card_indexes))
         return_cards = []
         random_card_indexes = random.sample(set(non_disabled_card_indexes), n)
         for i in random_card_indexes:
@@ -105,7 +105,7 @@ class SemiBot:
         :param suit:
         :return:
         """
-        message = "SemiBot.play_card(): "
+        message = "SimpleBot.play_card(): "
         if suit == "":
             Logs.debug_message(message + "first one, selecting random card...")
             index = random.sample(set(non_disabled_card_indexes), 1)[0]
@@ -122,7 +122,7 @@ class SemiBot:
 
     def play_color(self, table, suit):
         # "♥" "♦" "♠" "♣"
-        message = "SemiBot.play_color(): "
+        message = "SimpleBot.play_color(): "
         tarot_on_desk = False
         card_to_put_down = None
         max_color_on_table = 1
@@ -160,7 +160,7 @@ class SemiBot:
         return card_to_put_down
 
     def play_tarot(self, table, non_disabled_card_indexes):
-        message = "SemiBot.play_tarot(): "
+        message = "SimpleBot.play_tarot(): "
         max_tarot_on_table = 0
         lowest_tarot_in_hand = 22
         ltih_index = 0
