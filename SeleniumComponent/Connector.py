@@ -36,7 +36,7 @@ class Connector:
     def __init__(self, url):
         self.url = url
         self.driver = self.init_driver()
-        self.wait = WebDriverWait(self.driver, 7)
+        self.wait = WebDriverWait(self.driver, 10)
         self.is_four_players = config["player_number"] == 4
         self.player_name = ""
         self.tool = bot_logic.Tools.Tools()
@@ -128,6 +128,7 @@ class Connector:
             for i in range(5):
                 speed.send_keys(Keys.RIGHT)
 
+            # self.time_util(5)
             create_game = self.driver.find_element_by_css_selector("input[name='create']")
             self.click_execute(create_game)
 
@@ -269,11 +270,13 @@ class Connector:
                 self.get_cards()
                 self.tool.count_tarots_in_hand_and_color_points()
                 non_disabled_card_indexes = self.get_non_disabled_card_indexes()
-                disposed_cards_index = self.tool.choose_talon_step_2(non_disabled_card_indexes)
-                for card_index in disposed_cards_index:
-                    Logs.info_message(message + "Card put down -> " +
-                                      self.online_cards[card_index].get_attribute("alt"))
-                    self.click_execute(self.online_cards[card_index])
+                disposed_card_alts = self.tool.choose_talon_step_2(non_disabled_card_indexes)
+                for card_alt in disposed_card_alts:
+                    Logs.info_message(message + "Card put down -> " + str(card_alt))
+
+                    self.click_execute(
+                        self.driver.find_element_by_id("cards").find_element_by_css_selector("img[alt='" + card_alt + "']")
+                    )
                     self.time_util(1, "Waiting for another card to put down...")
             except NoSuchElementException:
                 Logs.error_message("Error in: " + message)
@@ -286,18 +289,22 @@ class Connector:
                     .find_elements_by_css_selector("img")
                 Logs.warning_message("Talon located from another player!!!! SUCCESS")
                 self.talon_located = True
+                selected_talon_alts = []
                 try:
                     for talon_card in talon:
-                        Logs.debug_message(talon_card.get_attribute("alt"))
+                        alt = talon_card.get_attribute("alt")
+                        Logs.debug_message(alt)
                         if "disabled" in talon_card.get_attribute("class"):
-                            Logs.debug_message(message + "Card '" + talon_card.get_attribute("alt") + "' was added to talon_online_cards")
-                            talon_online_cards.append(talon_card.get_attribute("alt"))
+                            Logs.debug_message(message + "Card '" + alt + "' was added to talon_online_cards")
+                            talon_online_cards.append(alt)
+                        else:
+                            selected_talon_alts.append(alt)
                 except StaleElementReferenceException:
                     Logs.error_message("Stale element reference: element is not attached to the page document")
                 if len(talon_online_cards) > 0 and not self.talon_subtracted:
-                    self.tool.set_suit_helper_objects_and_tarots(None, talon_online_cards)
+                    self.tool.set_suit_helper_objects_and_tarots_and_history(None, talon_online_cards)
+                    self.tool.selected_talon_alts = selected_talon_alts
                     self.talon_subtracted = True
-
 
     def napoved(self):
         napoved_message = "Connector.napoved(): "
@@ -311,6 +318,9 @@ class Connector:
         if not self.tool.is_my_turn(self.get_timers(1)):
             return
 
+        self.get_cards()
+        self.tool.count_num_of_colors_in_hand()
+
         try:
             self.click_execute(
                 self.driver.find_element_by_id("bonus").find_element_by_css_selector("input[name='announce']")
@@ -320,7 +330,7 @@ class Connector:
             raise NoSuchElementException
 
     def the_game(self):
-        message = "Connector.the_game()"
+        message = "Connector.the_game(): "
         Logs.debug_message(message + ": Starting game")
         state_name = "game"
 
@@ -339,7 +349,6 @@ class Connector:
                     return
                 if len(self.tool.cards) < 2 or rounds_left < 2:
                     break
-                # TODO preverji če se je okno za naslednjo rundo pojavu
                 if self.tool.is_my_turn(self.get_timers(2)):
                     self.check_for_ally()
                     table, card_counter = self.get_cards_from_table(player_positions)
@@ -349,19 +358,24 @@ class Connector:
                     self.get_cards()
                     indexes = self.get_non_disabled_card_indexes()
                     play = self.tool.play_card(indexes, table)
-                    try:
-                        table["stack0"] = self.online_cards[play].get_attribute("alt")
-                    except StaleElementReferenceException:
-                        Logs.error_message(message + "selenium.common.exceptions.StaleElementReferenceException: Possible card missing?! skipping round")
-                        continue
-                    self.click_execute(self.online_cards[play])
+                    table["stack0"] = play
+                    # try:
+                    #     pass
+                    #     # table["stack0"] = self.online_cards[play].get_attribute("alt")
+                    # except StaleElementReferenceException:
+                    #     Logs.error_message(message + "selenium.common.exceptions.StaleElementReferenceException: Possible card missing?! skipping round")
+                    #     continue
+
+                    self.click_execute(
+                        self.driver.find_element_by_id("cards").find_element_by_css_selector("img[alt='" + play + "']")
+                    )
                     rounds_left -= 1
                     Logs.info_message("Rounds Left: " + str(rounds_left))
 
                     for position in position_names:
                         if table[position] == "" and card_counter > 0 and self.element_located("#" + position + " img"):
-                            alt = self.driver.find_element_by_id(position)\
-                                .find_elements_by_css_selector("img")[0]\
+                            alt = self.driver.find_element_by_id(position) \
+                                .find_elements_by_css_selector("img")[0] \
                                 .get_attribute("alt")
                             table[position] = int(alt) if alt.isdigit() else alt
                             card_counter -= 1
@@ -370,7 +384,7 @@ class Connector:
                     Logs.debug_message(table)
                     Logs.debug_message("################################")
                     # Odštejemo števce za karte in preverimo za možnega ally-ja
-                    self.tool.set_suit_helper_objects_and_tarots(table)
+                    self.tool.set_suit_helper_objects_and_tarots_and_history(table)
                     # self.tool.check_for_ally(table)
 
                     # Reset the map
@@ -382,7 +396,6 @@ class Connector:
                 self.get_cards()
                 if len(self.tool.cards) == 0:
                     # Get last cards from table, valat.si automaticaly plays the last card for you so just get from table
-                    self.check_for_ally()
                     for position in player_positions:
                         if player_positions[position] == "" and self.element_located("#" + position + " img"):
                             alt = self.driver.find_element_by_id(position) \
@@ -390,10 +403,21 @@ class Connector:
                                 .get_attribute("alt")
                             player_positions[position] = int(alt) if alt.isdigit() else alt
 
+                        if not self.tool.is_ally_set() and not isinstance(player_positions[position], int):
+                            if player_positions[position] == self.tool.get_playing_suit() + CardRanks.KING:
+                                Logs.info_message(message + "Found ally in last round.")
+                                stacks = config["player_positions"].split(",")
+                                for s in [position] + [self.tool.playing_player]:
+                                    if s in stacks:
+                                        stacks.remove(s)
+                                    else:
+                                        Logs.warning_message(message + "Cannot remove stack from final round check for ally!")
+                                self.tool.set_ally(stacks[0])
+
                     Logs.debug_message("####### LAST CARDS FOR WHOLE TABLE ############")
                     Logs.debug_message(player_positions)
                     Logs.debug_message("###############################################")
-                    self.tool.set_suit_helper_objects_and_tarots(player_positions)
+                    self.tool.set_suit_helper_objects_and_tarots_and_history(player_positions, None)
                     break
 
             self.state = "end_game"
@@ -505,23 +529,23 @@ class Connector:
         Db.connect_to_db()
         results = self.get_points_from_scores()
         Logs.debug_message(self.card_ids)
+
         self.tool.set_rounds_db(results, self.talon_located)
         Db.execute_sql(
-            "INSERT INTO Rounds(bot_name, playing, points, tarot_count, color_points, game, played_suit, game_points, game_diff, bonuses, ally, talon_located, time_stamp) " +
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO Rounds(bot_name, playing, points, tarot_count, color_points, game, played_suit, game_points, " +
+            "game_diff, bonuses, ally, king_count, trula_count, talon_points, num_of_colors, talon_located, time_stamp)" +
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             self.tool.rounds_db.get_values())
+
         last_id = Db.get_last_row_id()
         Logs.debug_message(last_id)
         self.admin.last_row_id_from_db = last_id
-        self.tool.set_roundCards_db(Db.get_last_row_id(), self.card_ids)
-        Db.execute_sql("INSERT INTO RoundCards(round_id, card_id, is_from_talon, put_down) VALUES (%s, %s, %s, %s)",
-                       self.tool.roundCards_db.get_values(),
-                       True)
-        if self.my_bot_playing:
-            self.tool.set_methodOutcomes_db(last_id)
-            Db.execute_sql("INSERT INTO MethodOutcomes(round_id, bot_name, choose_king, choose_talon_1, choose_talon_2)" +
-                           "VALUES (%s, %s, %s, %s, %s)",
-                           self.tool.methodOutcomes_db.get_values())
+        for stack in ["talon", "stack0"] + config["player_positions"].split(","):
+            self.tool.set_roundCards_db(last_id, self.card_ids, stack)
+            Db.execute_sql("INSERT INTO RoundCards(round_id, card_id, is_from_talon, put_down, player) VALUES (%s, %s, %s, %s, %s)",
+                           self.tool.roundCards_db.get_values(),
+                           True)
+
         Db.close_db()
 
     def get_points_from_scores(self):
@@ -570,12 +594,12 @@ class Connector:
                 spans = self.driver.find_element_by_id(player_name).find_elements_by_css_selector(".bid span")
                 if len(spans) > 0:
                     player_map[player_name] = spans
-                    red_class = self.driver.find_element_by_id(player_name).find_elements_by_css_selector(".bid span[class='red']")
-
-                    Logs.debug_message(message + "red_class = spans[0].find_elements_by_css_selector(#" + player_name + " .bid span[class='red'])")
-                    Logs.debug_message(red_class)
-                    if red_class is not None and len(red_class) > 0:
-                        self.tool.playing_status = PlayingStatus.ALONE
+                    # red_class = self.driver.find_element_by_id(player_name).find_elements_by_css_selector(".bid span[class='red']")
+                    #
+                    # Logs.debug_message(message + "red_class = spans[0].find_elements_by_css_selector(#" + player_name + " .bid span[class='red'])")
+                    # Logs.debug_message(red_class)
+                    # if red_class is not None and len(red_class) > 0:
+                    #     self.tool.playing_status = PlayingStatus.ALONE
 
             except NoSuchElementException:
                 Logs.error_message("Error in: " + message)
@@ -599,6 +623,13 @@ class Connector:
             Logs.debug_message(message + "Printing player_properties")
             Logs.debug_message(player_properties)
 
+            if len(player_properties) == 2 and self.tool.playing_player == "":
+                if player_properties[0].isdigit():
+                    self.tool.game = int(player_properties[0])
+                    self.tool.set_bot_game()
+                self.tool.set_playing_suit(player_properties[1])
+                self.tool.playing_player = "stack" + possible_ally[-1]
+
             """
             <div class="bid">
                 <span title="Dve v križu">2</span>
@@ -607,10 +638,6 @@ class Connector:
             """
             if player_properties[0].isdigit() and player_properties[1] + CardRanks.KING in self.online_alts:
                 Logs.debug_message(message + "Found ally! Rufan")
-                if player_properties[0].isdigit():
-                    self.tool.game = int(player_properties[0])
-                    self.tool.set_bot_game()
-                    self.tool.set_playing_suit(player_properties[1])
                 self.rufan = True
                 self.tool.set_playing_status(PlayingStatus.RUFAN)
                 self.tool.set_ally("stack" + possible_ally[-1])
@@ -632,6 +659,7 @@ class Connector:
                         playing_game = int(pp)
                     elif pp in config["suit_signs"].split(","):
                         playing_suit = pp
+                        self.tool.playing_player = "stack" + pm[-1]
 
                 if pm in player_names:
                     player_names.remove(pm)

@@ -5,6 +5,7 @@ import operator
 
 class Deck:
     deck = []
+    alt_to_id = {}
 
     @staticmethod
     def create_deck(path):
@@ -15,6 +16,7 @@ class Deck:
             name, points, rank, suit, deck_order = line.split(";")
             card = Card.Card(name, int(points), int(rank), suit, int(deck_order))
             Deck.deck.append(card)
+            Deck.alt_to_id[card.alt] = int(deck_order)
         print("Created deck in: " + create_deck_message)
 
     @staticmethod

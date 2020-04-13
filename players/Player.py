@@ -7,3 +7,5 @@ class Player:
         self.has_tarots = True
         self.is_ally = False
         self.is_skrt = []
+        self.king_count = 0
+        self.trula_count = 0

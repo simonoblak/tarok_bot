@@ -1,6 +1,8 @@
 import Configuration
 import random
 from Logs import Logs
+from players.Player import Player
+from ProjectConstants.CardRanks import CardRanks
 
 config = Configuration.Configuration().get_config()
 
@@ -12,6 +14,7 @@ class SimpleBot:
         self.playing_suite = ""
         self.game = -1
         self.ally = ""
+        self.players = {}
         self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
         Logs.init_logs()
 
@@ -33,6 +36,8 @@ class SimpleBot:
         self.game = -1
         self.ally = ""
         self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
+        for p in config["player_positions"].split(","):
+            self.players[p] = Player(p)
 
     def choose_king(self):
         """
@@ -41,11 +46,14 @@ class SimpleBot:
         """
         message = "SimpleBot.choose_king(): "
         suits = config["suit_signs"].split(",")
+        suits_in_my_hand = []
         for card in self.cards:
             bad_suit = ""
             if card.is_king:
                 Logs.debug_message(message + "Removing suit: " + card.suit)
                 suits.remove(card.suit)
+            if card.suit not in suits_in_my_hand:
+                suits_in_my_hand.append(card.suit)
 
             # What the actual F*** ?!?!
             """
@@ -207,4 +215,20 @@ class SimpleBot:
         :param talon_cards:
         :return:
         """
-        return
+        message = "SimpleBot.set_suit_helper_objects_and_tarots(): "
+        for stack in table:
+            if stack == "stack0":
+                continue
+            if table[stack] != "":
+                alt = table[stack]
+                self.players[stack].cards.append(alt)
+                if isinstance(alt, int):
+                    self.players[stack].tarot_count += 1
+                    if alt == 1 or alt == 21 or alt == 22:
+                        self.players[stack].trula_count += 1
+                    return
+                # od tu naprej so samo barve
+                if alt[1] == CardRanks.KING:
+                    self.players[stack].king_count += 1
+            else:
+                Logs.error_message(message + "table[stack] is empty?!?")

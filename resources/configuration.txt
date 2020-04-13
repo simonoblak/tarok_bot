@@ -6,7 +6,7 @@ user_config=resources/user_config.txt
 is_pass_encoded=yes
 # Time to wait for the bot to create a game on valat.si after login
 time_to_wait=20
-waiting_for_next_round=12
+waiting_for_next_round=10
 
 ##### TABLE SETTINGS
 player_number=4
