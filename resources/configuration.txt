@@ -5,7 +5,7 @@ user_config=resources/user_config.txt
 # yes, no
 is_pass_encoded=yes
 # Time to wait for the bot to create a game on valat.si after login
-time_to_wait=20
+time_to_wait=30
 waiting_for_next_round=10
 
 ##### TABLE SETTINGS
@@ -18,7 +18,7 @@ player_names=player1,player2,player3
 ##### BOT PARAMETERS
 #RandomBot, SimpleBot, WonderfulBot
 all_bots=RandomBot,SimpleBot,WonderfulBot
-playing_bot=WonderfulBot
+playing_bot=RandomBot
 #Vražji, Težek
 opponent_bot=Vražji
 
@@ -39,7 +39,8 @@ write_to_database=yes
 host=localhost
 db_user=root
 db_pass=root
-database=valat
+# valat, valat_results
+database=valat_results
 
 ##### ADMIN TOOL
 # yes, no

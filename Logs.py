@@ -5,6 +5,7 @@ import Configuration
 
 class Logs:
     log_settings = []
+    counter_for_errors = 0
 
     @staticmethod
     def init_logs():
@@ -15,6 +16,7 @@ class Logs:
 
     @staticmethod
     def error_message(message):
+        Logs.counter_for_errors += 1
         if "error" in Logs.log_settings:
             Logs.print_message(message, LogLevels.ERROR, TerminalColors.FAIL)
 
@@ -61,6 +63,10 @@ class Logs:
             f"{ts.minute:02d}" + time_sep + \
             f"{ts.second:02d}" + time_sep + \
             f"{ts.microsecond}" + " "
+
+    @staticmethod
+    def reset_error_counter():
+        Logs.counter_for_errors = 0
 
 
 class LogLevels:

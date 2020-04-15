@@ -47,6 +47,18 @@ class Db:
                 Logs.warning_message(message + "Commit to database NOT successful!")
 
     @staticmethod
+    def execute_select(sql):
+        if config["write_to_database"] == "yes" and Db.status_connected:
+            message = "Db.execute_select(): "
+            Logs.debug_message(message + "SQL Select statement: " + sql)
+            try:
+                Db.cursor.execute(sql)
+                Logs.debug_message(message + "Returning results")
+                return Db.cursor.fetchall()
+            except Exception:
+                Logs.warning_message(message + "Commit to database NOT successful!")
+
+    @staticmethod
     def get_last_row_id():
         if config["write_to_database"] == "yes" and Db.status_connected:
             return Db.cursor.lastrowid

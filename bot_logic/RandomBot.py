@@ -2,6 +2,7 @@ import Configuration
 import random
 from ProjectConstants.CardRanks import CardRanks
 from Logs import Logs
+from players.Player import Player
 
 config = Configuration.Configuration().get_config()
 
@@ -14,7 +15,6 @@ class RandomBot:
         self.game = -1
         self.ally = ""
         self.players = {}
-        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
 
     def set_cards(self, cards):
         """
@@ -33,8 +33,8 @@ class RandomBot:
         self.king_indexes = []
         self.game = -1
         self.ally = ""
-        self.players = {}
-        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
+        for p in config["player_positions"].split(","):
+            self.players[p] = Player(p)
 
     def choose_king(self):
         """
@@ -59,6 +59,12 @@ class RandomBot:
         for index, card in enumerate(talon):
             if card.alt == self.playing_suite + CardRanks.KING:
                 Logs.debug_message(message + "Choosing my king.")
+                return index
+            if card.rank == CardRanks.MOND_INT:
+                Logs.debug_message(message + "Choosing MOND.")
+                return index
+            if card.rank == CardRanks.SKIS_INT:
+                Logs.debug_message(message + "Choosing SKIS.")
                 return index
 
         return talon.index(random.choice(talon))
@@ -113,9 +119,9 @@ class RandomBot:
                 self.players[stack].cards.append(alt)
                 if isinstance(alt, int):
                     self.players[stack].tarot_count += 1
-                    if alt == 1 or alt == 21 or alt == 22:
+                    if alt == CardRanks.PAGAT_INT or alt == CardRanks.MOND_INT or alt == CardRanks.SKIS_INT:
                         self.players[stack].trula_count += 1
-                    return
+                    continue
                 # od tu naprej so samo barve
                 if alt[1] == CardRanks.KING:
                     self.players[stack].king_count += 1

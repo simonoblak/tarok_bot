@@ -15,7 +15,8 @@ class RoundCards:
         values = []
         card_and_talon_ids = []
         if self.stack != "stack0" and self.stack != "tarot":
-            card_and_talon_ids = [v for v in self.card_ids if v not in self.talon_ids] + self.put_down_ids
+            # [v for v in self.card_ids if v not in self.talon_ids]
+            card_and_talon_ids = self.card_ids + self.put_down_ids
         else:
             card_and_talon_ids = self.card_ids + self.talon_ids
 

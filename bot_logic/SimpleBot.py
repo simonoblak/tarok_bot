@@ -15,7 +15,6 @@ class SimpleBot:
         self.game = -1
         self.ally = ""
         self.players = {}
-        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
         Logs.init_logs()
 
     def set_cards(self, cards):
@@ -35,7 +34,6 @@ class SimpleBot:
         self.king_indexes = []
         self.game = -1
         self.ally = ""
-        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
         for p in config["player_positions"].split(","):
             self.players[p] = Player(p)
 
@@ -224,9 +222,9 @@ class SimpleBot:
                 self.players[stack].cards.append(alt)
                 if isinstance(alt, int):
                     self.players[stack].tarot_count += 1
-                    if alt == 1 or alt == 21 or alt == 22:
+                    if alt == CardRanks.PAGAT_INT or alt == CardRanks.MOND_INT or alt == CardRanks.SKIS_INT:
                         self.players[stack].trula_count += 1
-                    return
+                    continue
                 # od tu naprej so samo barve
                 if alt[1] == CardRanks.KING:
                     self.players[stack].king_count += 1

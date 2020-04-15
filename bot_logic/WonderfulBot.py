@@ -11,7 +11,6 @@ from ProjectConstants.CardRanks import CardRanks
 from ProjectConstants.PlayingStatus import PlayingStatus
 
 config = Configuration.Configuration().get_config()
-# TODO razširi bazo tako da boš vsak primer (vsak return) si zapisal kolikokrat se je zgodil. npr. z številkami označi in s komentarjem zapiši še kej
 """
 kings
 https://snipsave.com/user/blavrhovec/snippet/r09laEtAoDu4GJHFBO/?fbclid=IwAR1q8tiih5H3l-60Um59RbU28vuM0O6ndB4PJUUn-3CfUZgG7exzCyFXseo
@@ -33,7 +32,6 @@ class WonderfulBot:
         self.number_of_rounds = 12 if config["player_number"] == 4 else 16 if config["player_number"] == 3 else 0
         self.important_tarots = [x for x in range(config["min_important_tarot"], 23)]
         self.players = {}
-        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
         Logs.init_logs()
 
     def set_cards(self, cards):
@@ -55,7 +53,6 @@ class WonderfulBot:
         self.history = {}
         self.ally = ""
         self.important_tarots = [x for x in range(config["min_important_tarot"], 23)]
-        self.method_outcomes = {"king": -1, "talon1": -1, "talon2": -1}
 
         for p in config["player_positions"].split(","):
             self.players[p] = Player(p)
@@ -251,15 +248,8 @@ class WonderfulBot:
                             max_color_card = card.rank
                             max_color_card_suit = s
 
-                # TODO remove this if because this should produce a suit. This if statement is a failsafe
-                if max_color_card_suit != "":
-                    self.playing_suite = max_color_card_suit
-                    Logs.debug_message(message + "Selecting suit with max card: " + self.playing_suite)
-                    return self.playing_suite
-
-                Logs.error_message("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
-                self.playing_suite = random.choice(two_card_suit)
-                Logs.error_message(message + "SOMETHING IS WRONG: " + self.playing_suite)
+                self.playing_suite = max_color_card_suit
+                Logs.debug_message(message + "Selecting suit with max card: " + self.playing_suite)
                 return self.playing_suite
 
             # if no color can be removed ...
@@ -272,15 +262,8 @@ class WonderfulBot:
                             max_color_card = card.rank
                             max_color_card_suit = s
 
-                # TODO remove this if because this should produce a suit. This if statement is a failsafe
-                if max_color_card_suit != "":
-                    self.playing_suite = max_color_card_suit
-                    Logs.debug_message(message + "Selecting suit with max card: " + self.playing_suite)
-                    return self.playing_suite
-
-                Logs.error_message("SOMETHING IS WRONG WITH THIS LOGIC. FIX IT IMMEDIATELY!!!")
-                self.playing_suite = random.choice(three_card_suit)
-                Logs.error_message(message + "SOMETHING IS WRONG: " + self.playing_suite)
+                self.playing_suite = max_color_card_suit
+                Logs.debug_message(message + "Selecting suit with max card: " + self.playing_suite)
                 return self.playing_suite
 
         Logs.warning_message(message + "This is not a 1 or 2 game. selecting a random suit with no king...")
@@ -298,12 +281,6 @@ class WonderfulBot:
         piles = 2 if n == 3 else 3 if n == 2 else 6 if n == 1 else 0
         pile_helpers = []
         talon_kings = []
-        talon_tarots = []
-        """
-        1. preveri če je klicani kralj v talonu
-        2. preveri če je v kupčku kakšna barva enaka kakor klicana barva
-        3. od svojih counterjev odštevi ostale karte iz talona
-        """
 
         has_my_color = False
         has_my_color_index = -1
@@ -357,8 +334,6 @@ class WonderfulBot:
         for i, card in enumerate(talon):
             if card.is_king:
                 talon_kings.append((card.suit, i))
-            if card.is_tarot:
-                talon_tarots.append((card.rank, i))
 
         # TODO insert logic if talon has kings
         if len(talon_kings) != 0:
@@ -383,14 +358,9 @@ class WonderfulBot:
             Logs.debug_message(message + "Selecting I")
             return has_pagat_index
 
-        # TODO fix this
-        if len(talon_tarots) != 0:
-            pass
-
         Logs.debug_message(message + "Piles -> " + str(piles))
         n_start = 0
         n_end = n
-        # TODO nared tko da bojo pile helperji pomagal kartam v roki, ne pa zbrat najboljši kupček
         for pile_index in range(piles):
             tph = TalonPileHelper.TalonPileHelper(pile_index, self.game)
             grade = 0
@@ -417,7 +387,6 @@ class WonderfulBot:
             if max_grade[0] < ph.grade:
                 max_grade = (ph.grade, ph.id)
 
-        # TODO fix this logic
         if self.game == 2:
             # This returns the first card of the pile
             return max_grade[1] * 2
@@ -460,7 +429,6 @@ class WonderfulBot:
                     king_count += 1
                 suit_counter[card.suit].subtract_color()
 
-        # TODO neki nared s tem
         # če si bom mogu taroke zalagat
         if tarot_count + king_count >= self.number_of_rounds:
             Logs.debug_message(message + "tarot count and king count are higher than rounds. NICE!!!")
@@ -518,7 +486,6 @@ class WonderfulBot:
                         if not suit_counter[s].has_king and not self.playing_suite == s:
                             game_2_suits_with_1_card += self.get_cards_from_suit(s)
 
-                    # TODO raj posortiri po temu kok kart je še ostal oz. vzem v premislek...
                     if len(game_2_suits_with_1_card) > 1:
                         game_2_suits_with_1_card.sort(key=operator.attrgetter('rank'), reverse=True)
 
@@ -622,8 +589,6 @@ class WonderfulBot:
             if card.suit == suit:
                 suited_cards.append(card)
         suited_cards.sort(key=operator.attrgetter('rank'), reverse=True)
-        # TODO try this return
-        # return [card.suit for card in self.cards if card.suit == suit].sort(key=operator.attrgetter('rank'), reverse=True)
         return suited_cards
 
     def play_card(self, non_disabled_card_indexes, table, suit, playing_status):
@@ -632,6 +597,7 @@ class WonderfulBot:
         :param non_disabled_card_indexes:
         :param table:
         :param suit:
+        :param playing_status:
         :return:
         """
         message = "WonderfulBot.play_card(): "
@@ -921,20 +887,21 @@ class WonderfulBot:
         am_i_last = False
         highest_tarot_on_table = 0
 
+        # ali je tarok na mizi?
+        tarot_on_table = False
+        skis_on_table = False
+        for stack in table:
+            if isinstance(table[stack], int):
+                tarot_on_table = True
+                if table[stack] == 22:
+                    skis_on_table = True
+                if table[stack] > highest_tarot_on_table:
+                    highest_tarot_on_table = table[stack]
+
         # ali sem zadnji na vrsti AND imam 21ko v roki
         if table["stack1"] != "" and table["stack2"] != "" and table["stack3"] != "":
             am_i_last = True
 
-            # ali je tarok na mizi?
-            tarot_on_table = False
-            skis_on_table = False
-            for stack in table:
-                if isinstance(table[stack], int):
-                    tarot_on_table = True
-                    if table[stack] == 22:
-                        skis_on_table = True
-                    if table[stack] > highest_tarot_on_table:
-                        highest_tarot_on_table = table[stack]
             if suit != "tarot" and not tarot_on_table and self.count_tarots_in_hand() > 0:
                 Logs.debug_message(message + "Returning minimum tarot because there are no other tarots on desk")
                 return self.get_highest_or_lowest_tarot("L", True, True)
@@ -975,7 +942,7 @@ class WonderfulBot:
         if suit != "tarot" and not self.suit_objects[suit].was_already_played and self.suit_objects[suit].color_count > 3:
             # RETURN min tarot
             return_card = self.get_highest_or_lowest_tarot("L")
-            if return_card is not None:
+            if return_card is not None and not tarot_on_table:
                 Logs.debug_message(message + "Returning lowest tarot because color not played yet")
                 return return_card
 
@@ -1088,7 +1055,7 @@ class WonderfulBot:
         self.players[stack].cards.append(alt)
         if isinstance(alt, int):
             self.players[stack].tarot_count += 1
-            if alt == 1 or alt == 21 or alt == 22:
+            if alt == CardRanks.PAGAT_INT or alt == CardRanks.MOND_INT or alt == CardRanks.SKIS_INT:
                 self.players[stack].trula_count += 1
             return
         # od tu naprej so samo barve

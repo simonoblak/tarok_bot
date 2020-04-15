@@ -4,6 +4,7 @@ from Logs import Logs
 from Configuration import Configuration
 from DatabaseComponent.db import Db
 import threading
+from ProjectConstants.AdminState import AdminState
 
 config = Configuration().get_config()
 
@@ -13,7 +14,7 @@ class Admin(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.start()
-        self.bot_state = "set"
+        self.bot_state = AdminState.SET
         self.last_row_id_from_db = None
         self.is_my_bot_playing = False
 
@@ -25,20 +26,10 @@ class Admin(threading.Thread):
         self.bot_state = state
 
     def set_to_reset(self):
-        self.set_bot_state("reset")
+        self.set_bot_state(AdminState.RESET)
 
     def set_to_set(self):
-        self.set_bot_state("set")
-
-    # def set_my_bot_playing(self, state):
-    #     Logs.info_message("Admin.set_my_bot_playing(): Setting to -> " + state.__str__())
-    #     self.is_my_bot_playing = state
-    #
-    # def set_my_bot_true(self):
-    #     self.set_my_bot_playing(True)
-    #
-    # def set_my_bot_false(self):
-    #     self.set_my_bot_playing(False)
+        self.set_bot_state(AdminState.SET)
 
     def set_ID_to_corrupted(self, c_id=None):
         """

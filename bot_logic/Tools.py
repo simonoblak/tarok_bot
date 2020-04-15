@@ -101,21 +101,22 @@ class Tools:
                 else:
                     self.talon_points += talon[i].points
         """
-        for i in range(0, 6, self.game):
-            if self.game == 2:
-                if i <= index <= i + 1:
-                    self.talon_ids.append(talon[i].deck_order)
-                    self.talon_ids.append(talon[i + 1].deck_order)
-                else:
-                    self.talon_points += talon[i].points + talon[i + 1].points
-                    self.leaved_talon_ids.append(talon[i].deck_order)
-                    self.leaved_talon_ids.append(talon[i + 1].deck_order)
-            elif self.game == 1:
-                if i == index:
-                    self.talon_ids.append(talon[i].deck_order)
-                else:
-                    self.talon_points += talon[i].points
-                    self.leaved_talon_ids.append(talon[i].deck_order)
+        if self.game > 0:
+            for i in range(0, 6, self.game):
+                if self.game == 2:
+                    if i <= index <= i + 1:
+                        self.talon_ids.append(talon[i].deck_order)
+                        self.talon_ids.append(talon[i + 1].deck_order)
+                    else:
+                        self.talon_points += talon[i].points + talon[i + 1].points
+                        self.leaved_talon_ids.append(talon[i].deck_order)
+                        self.leaved_talon_ids.append(talon[i + 1].deck_order)
+                elif self.game == 1:
+                    if i == index:
+                        self.talon_ids.append(talon[i].deck_order)
+                    else:
+                        self.talon_points += talon[i].points
+                        self.leaved_talon_ids.append(talon[i].deck_order)
 
         """
         if 0 <= index <= 1:
@@ -150,8 +151,6 @@ class Tools:
         #     Logs.debug_message("Tools.convert_online_cards_into_bot_format(): " + c.get_card_name())
 
     def convert_alts_to_cards(self, online_cards):
-        # TODO check if this return works
-        # return [card for online_card in online_cards for card in self.deck if online_card == card.alt]
         tab = []
         for online_card in online_cards:
             for card in self.deck:
@@ -174,7 +173,8 @@ class Tools:
         card = self.playing_bot.play_card(non_disabled_card_indexes, table, suit, self.playing_status)
         if card is None:
             Logs.error_message(message + "Card is None... No card was played... Selecting Random")
-            return random.sample(set(non_disabled_card_indexes), 1)[0]
+            random_index = random.sample(set(non_disabled_card_indexes), 1)[0]
+            card = self.cards[random_index]
         Logs.info_message(message + "Played card is -> " + card.alt)
 
         self.suit_of_table = suit if suit != "" else card.suit
@@ -201,10 +201,10 @@ class Tools:
                 self.talon_points += talon_cards[i].points
                 self.remove_from_deck(talon_cards[i].alt)
 
-        self.playing_bot.set_suit_helper_objects_and_tarots(table, self.suit_of_table, talon_cards)
-
         if table is None:
             return
+        self.playing_bot.set_suit_helper_objects_and_tarots(table, self.suit_of_table, talon_cards)
+
         for stack in table:
             if table[stack] == "":
                 Logs.error_message(message + "table[stack] is empty?!")
@@ -305,12 +305,20 @@ class Tools:
         self.color_points = cp
         Logs.debug_message("Tools.count_tarots_in_hand_and_color_points(): tarot_count(" + str(self.tarot_count) + "), color_points(" + str(self.color_points) + ")")
 
-    def count_num_of_colors_in_hand(self):
+    def count_colors_kings_and_trula(self):
         different_suits = []
+        tc = 0
+        kc = 0
         for card in self.cards:
-            if not card.is_tarot and card.suit not in different_suits:
+            if card.is_tarot:
+                if card.rank == 1 or card.rank == 21 or card.rank == 22:
+                    tc += 1
+            elif card.suit not in different_suits:
                 different_suits.append(card.suit)
-
+            if card.is_king:
+                kc += 1
+        self.trula_count = tc
+        self.king_count = kc
         self.num_of_colors = len(different_suits)
 
     def extract_scores(self, score):
@@ -339,7 +347,3 @@ class Tools:
     def get_playing_suit(self):
         Logs.debug_message("Tools.get_playing_suit(): getting playing suit.")
         return self.playing_bot.playing_suite
-
-"""
-[3, 11, 19, 28] + [10, 14, 31, 32, 2, 5, 18, 21, 36, 40, 42, 47] + [1, 34, 22, 39, 25, 50, 29, 48, 30, 53, 41, 43] + [8, 4, 38, 16, 44, 9, 51, 12, 52, 13, 54, 15] + [9, 8] + [23, 17] + [7, 6, 24, 33, 26, 49, 27, 46, 35, 45, 37, 20]
-"""
