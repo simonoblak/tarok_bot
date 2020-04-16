@@ -56,17 +56,20 @@ class RandomBot:
         :return:
         """
         message = "RandomBot.choose_talon_step_1(): "
+        important_indexes = {"my_king": -1, "mond": -1, "skis": -1}
         for index, card in enumerate(talon):
             if card.alt == self.playing_suite + CardRanks.KING:
-                Logs.debug_message(message + "Choosing my king.")
-                return index
+                Logs.debug_message(message + "Found my king.")
+                important_indexes["my_king"] = index
             if card.rank == CardRanks.MOND_INT:
-                Logs.debug_message(message + "Choosing MOND.")
-                return index
+                Logs.debug_message(message + "Found MOND.")
+                important_indexes["mond"] = index
             if card.rank == CardRanks.SKIS_INT:
-                Logs.debug_message(message + "Choosing SKIS.")
-                return index
-
+                Logs.debug_message(message + "Found SKIS.")
+                important_indexes["skis"] = index
+        for i in important_indexes:
+            if important_indexes[i] > -1:
+                return important_indexes[i]
         return talon.index(random.choice(talon))
 
     def choose_talon_step_2(self, n, non_disabled_card_indexes):

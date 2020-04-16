@@ -43,6 +43,7 @@ class Connector:
         self.player_names = ()
         self.tool = bot_logic.Tools.Tools()
         self.my_bot_playing = False
+        self.choose_king_done = False
         self.choose_talon_done = False
         self.rufan = False
         self.talon_located = False
@@ -75,10 +76,11 @@ class Connector:
         self.card_ids = self.tool.get_card_ids()
         self.talon_subtracted = False
         self.rufan = False
+        self.choose_king_done = False
         self.choose_talon_done = False
         self.talon_located = False
         if Logs.counter_for_errors > 0:
-            Logs.warning_message("There were " + str(Logs.counter_for_errors) + "errors in previous round")
+            Logs.warning_message("There were " + str(Logs.counter_for_errors) + " errors in previous round")
             Logs.reset_error_counter()
 
     def click_execute(self, element):
@@ -119,7 +121,7 @@ class Connector:
         try:
             # Saving nickname
             self.player_name = self.driver.find_element_by_css_selector("#profile h3").text.lower()
-            self.player_names = (self.player_name, "horjul123", "lucka zagar")
+            self.player_names = (self.player_name, "horjul123", "lucka zagar", "develop simon")
 
             # Create new game
             self.time_util(config["time_to_wait"], "pred klikom za novo igro")
@@ -136,10 +138,10 @@ class Connector:
 
             self.time_util(2, "Pred ustvarjanjem igre")
 
-            # self.driver.implicitly_wait(3)
-            # speed = self.driver.find_element_by_css_selector("input[name='rounds']")
-            # for i in range(2):
-            #     speed.send_keys(Keys.LEFT)
+            self.driver.implicitly_wait(3)
+            speed = self.driver.find_element_by_css_selector("input[name='rounds']")
+            for i in range(2):
+                speed.send_keys(Keys.LEFT)
 
             self.driver.implicitly_wait(3)
             speed = self.driver.find_element_by_css_selector("input[name='tempo']")
@@ -186,6 +188,8 @@ class Connector:
         choose_game_message = "Connector.choose_game(): "
         Logs.debug_message(choose_game_message + "Choosing game")
         state_name = "bid"
+        is_over_counter = 0
+        is_game_selected_naprej = False
         self.init_round()
         if self.check_if_reset():
             return
@@ -197,6 +201,10 @@ class Connector:
                 break
             else:
                 self.time_util(1, choose_game_message)
+                is_over_counter += 1
+                if is_over_counter > 20:
+                    self.state = "over"
+                    return
 
         choose_over = False
         try:
@@ -209,16 +217,22 @@ class Connector:
 
                 while len(game_elements) > 0:
                     highlighted_game = game_elements[-1]
-                    if highlighted_game.text in not_allowed_games:
+                    highlighted_text = highlighted_game.text
+                    if highlighted_text in not_allowed_games:
                         del(game_elements[-1])
                     else:
                         self.click_execute(highlighted_game)
-                        self.tool.set_game(highlighted_game.text)
+                        self.tool.set_game(highlighted_text)
+                        if highlighted_text is not None and highlighted_text.lower() == "naprej":
+                            is_game_selected_naprej = True
                         break
 
                 self.time_util(3, "Čakamo na izbiro drugih igralcov")
                 self.check_state(state_name)
                 if self.state == "call":
+                    if is_game_selected_naprej:
+                        Logs.debug_message(choose_game_message + "NAPREJ!!")
+                        break
                     if self.driver.find_element_by_id("call").find_element_by_css_selector("h2").text.lower().startswith(self.player_names):
                         self.my_bot_playing = True
                         self.tool.set_playing_status(PlayingStatus.PLAYING)
@@ -257,13 +271,14 @@ class Connector:
             Logs.warning_message("Stopping the bot")
             self.admin.set_bot_state(AdminState.RESET)
 
-        if self.my_bot_playing:
+        if self.my_bot_playing and not self.choose_king_done:
             self.time_util(1, "Izbiramo kralja")
             suite = self.tool.choose_king()
             try:
                 self.click_execute(
                     self.driver.find_element_by_id("call").find_element_by_css_selector("img[alt='" + suite + "']")
                 )
+                self.choose_king_done = True
             except NoSuchElementException:
                 Logs.error_message("Error in: " + choose_king_message)
                 # raise NoSuchElementException
@@ -432,8 +447,13 @@ class Connector:
                     for p in player_positions:
                         player_positions[p] = ""
 
+            waiting_counter = 0
             while True:
                 self.time_util(5, "waiting to get the last cards")
+                if waiting_counter > 4:
+                    Logs.error_message(message + "This is taking to long, something is wrong")
+                    raise Exception
+                waiting_counter += 1
                 self.get_cards()
                 if len(self.tool.cards) == 0:
                     # Get last cards from table, valat.si automaticaly plays the last card for you so just get from table
@@ -632,7 +652,7 @@ class Connector:
         message = "Connector.check_for_ally(): "
         player_names = config["player_names"].split(",")
         player_map = {}
-        if self.tool.is_ally_set():
+        if self.tool.is_ally_set() or self.tool.playing_status == PlayingStatus.ALONE:
             return
         for player_name in player_names:
             try:

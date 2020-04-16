@@ -5,7 +5,7 @@ user_config=resources/user_config.txt
 # yes, no
 is_pass_encoded=yes
 # Time to wait for the bot to create a game on valat.si after login
-time_to_wait=30
+time_to_wait=10
 waiting_for_next_round=10
 
 ##### TABLE SETTINGS
@@ -45,3 +45,7 @@ database=valat_results
 ##### ADMIN TOOL
 # yes, no
 start_admin=yes
+
+##### SOUNDS
+error_song=resources/Iron_Maiden_Fear_of_the_Dark_wav
+success_song=resources/SOFI_TUKKER_Purple_Hat
