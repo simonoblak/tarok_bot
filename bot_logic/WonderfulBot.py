@@ -605,7 +605,11 @@ class WonderfulBot:
             self.players[self.ally].is_ally = True
         if suit == "":
             Logs.debug_message(message + "first one, selecting card...")
-            return self.play_first(non_disabled_card_indexes, playing_status)
+            card_to_put_down = self.play_first(non_disabled_card_indexes, playing_status)
+            if card_to_put_down is not None and not card_to_put_down.is_tarot:
+                Logs.debug_message(message + "Suit was played -> " + str(card_to_put_down.suit))
+                self.suit_objects[card_to_put_down.suit].was_already_played = True
+            return card_to_put_down
 
         if suit != "tarot":
             Logs.debug_message("Suit -> " + suit)
@@ -643,8 +647,11 @@ class WonderfulBot:
         for so in self.suit_objects:
             sh = self.suit_objects[so]
             if sh.has_king and not sh.was_already_played and sh.color_count > 3:
-                Logs.debug_message(message + "Choosing king -> " + sh.suit + CardRanks.KING)
-                return self.get_card_from_alt(sh.suit + CardRanks.KING)
+                card_king = self.get_card_from_alt(sh.suit + CardRanks.KING)
+                if card_king is not None:
+                    Logs.debug_message(message + "Choosing king -> " + sh.suit + CardRanks.KING)
+                    self.suit_objects[so].was_already_played = True
+                    return card_king
 
         # Če igram igro in imam barvo v kateri igram odigraj najbolj vredno, če ne pa igram najmanj vredno
         cards_with_playing_suit = self.get_cards_from_suit(self.playing_suite)
@@ -662,7 +669,7 @@ class WonderfulBot:
             if not c.is_tarot and \
                     c.suit not in already_played_suits_in_my_hand and \
                     self.suit_objects[c.suit].was_already_played and \
-                    c.rank >= int(CardRanks.QUEEN):
+                    c.rank <= int(CardRanks.QUEEN):
                 already_played_suits_in_my_hand.append(c.suit)
 
         if len(already_played_suits_in_my_hand) > 0:
@@ -690,7 +697,10 @@ class WonderfulBot:
                                "] < [" + str(tarots_in_hand_counter) + "] tarots_in_hand_counter = highest tarot")
         if number_of_players_with_tarots == 0 or ceil(
                 self.tarot_count / number_of_players_with_tarots) < tarots_in_hand_counter:
-            return self.get_highest_or_lowest_tarot("H")
+            card_to_put_down = self.get_highest_or_lowest_tarot("H")
+            if card_to_put_down is not None:
+                Logs.debug_message(message + "Returning highest tarot")
+                return card_to_put_down
 
         # random med kartami ki niso kralji ali dame
         platelci_indexi = []
@@ -861,6 +871,8 @@ class WonderfulBot:
                 RETURN min tarot
             ali imam 21ko v roki
                 RETURN XXI
+            ali imam v roki višji tarok kakor je na mizi
+                RETURN naslednji višji tarok
 
         ali je znan soigralec?
         yes
@@ -902,6 +914,7 @@ class WonderfulBot:
         if table["stack1"] != "" and table["stack2"] != "" and table["stack3"] != "":
             am_i_last = True
 
+            # Returning min tarot because there are no other tarots on desk
             if suit != "tarot" and not tarot_on_table and self.count_tarots_in_hand() > 0:
                 Logs.debug_message(message + "Returning minimum tarot because there are no other tarots on desk")
                 return self.get_highest_or_lowest_tarot("L", True, True)
@@ -911,6 +924,12 @@ class WonderfulBot:
             if possible_mond is not None and not skis_on_table:
                 Logs.debug_message(message + "Returning XXI because I'm last.")
                 return possible_mond
+
+            # try to return next higher tarot
+            possible_higher_tarot = self.get_next_higher_tarot(highest_tarot_on_table, am_i_last)
+            if possible_higher_tarot is not None:
+                Logs.debug_message(message + "Returning next higher tarot")
+                return possible_higher_tarot
 
         # ali je znan soigralec?
         if self.ally != "":
@@ -1021,7 +1040,7 @@ class WonderfulBot:
         :param talon_cards:
         :return:
         """
-        message = "WonderfulBot.set_suit_helper_objects(): "
+        message = "WonderfulBot.set_suit_helper_objects_and_tarots(): "
         if talon_cards is not None:
             Logs.debug_message(message + "Here only to subtract talon...")
             for talon_card in talon_cards:
@@ -1031,6 +1050,9 @@ class WonderfulBot:
                     self.suit_objects[talon_card.suit].subtract_color()
             return
         for stack in table:
+            if table[stack] in self.important_tarots:
+                Logs.debug_message(message + "Removing from important tarots -> " + str(table[stack]))
+                self.important_tarots.remove(table[stack])
             if stack == "stack0":
                 continue
             if table[stack] != "":
@@ -1047,9 +1069,6 @@ class WonderfulBot:
                         self.players[stack].has_tarots = False
             else:
                 Logs.error_message(message + "table[stack] is empty?!?")
-            if table[stack] in self.important_tarots:
-                Logs.debug_message(message + "Removing from important tarots -> " + str(table[stack]))
-                self.important_tarots.remove(table[stack])
 
     def set_player_statistics(self, stack, alt):
         self.players[stack].cards.append(alt)

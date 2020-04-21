@@ -23,8 +23,3 @@ def send_email(email_message=""):
         server.login(sender_email, password)
         for receiver_email in receiver_emails.split(","):
             server.sendmail(sender_email, receiver_email, message.encode("utf-8"))
-
-
-
-
-

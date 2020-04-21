@@ -3,7 +3,9 @@ import Configuration
 from SeleniumComponent import Connector
 import winsound
 from CrashWarn.EmailSender import send_email
+from CrashWarn.MusicPlayer import MusicPlayer
 import traceback
+from ProjectConstants.ConnectorState import ConnectorState
 
 """
 SPLOŠNI ZAPISKI
@@ -44,21 +46,21 @@ def tarok_bot():
 
         # GAME
         while True:
-            if valat.state == "bid":
+            if valat.state == ConnectorState.BID:
                 valat.get_cards()
                 valat.choose_game()
-            elif valat.state == "call":
+            elif valat.state == ConnectorState.CALL:
                 valat.choose_king()
-            elif valat.state == "talon":
+            elif valat.state == ConnectorState.TALON:
                 valat.choose_talon()
-            elif valat.state == "bonus":
+            elif valat.state == ConnectorState.BONUS:
                 valat.napoved()
-            elif valat.state == "game":
+            elif valat.state == ConnectorState.GAME:
                 valat.the_game()
-            elif valat.state == "end_game":
+            elif valat.state == ConnectorState.END_GAME:
                 valat.time_util(config["waiting_for_next_round"], "Waiting for next game")
-                valat.state = "bid"
-            elif valat.state == "over":
+                valat.state = ConnectorState.BID
+            elif valat.state == ConnectorState.OVER:
                 send_email_message = "Bot has successfully finished testing."
                 song_to_play = config["success_song"]
                 valat.close_connection()
@@ -81,4 +83,4 @@ def tarok_bot():
         print(traceback.format_exc())
 
     send_email(send_email_message)
-    winsound.PlaySound(song_to_play, winsound.SND_ALIAS)
+    MusicPlayer.play_sound(song_to_play)

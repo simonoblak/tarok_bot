@@ -27,6 +27,7 @@ class Tools:
         self.put_down_ids = []
         self.playing_status = PlayingStatus.NO
         self.playing_player = ""
+        self.not_supported_game = False
         self.selected_talon_alts = []
         self.leaved_talon_alts = []
         self.leaved_talon_ids = []
@@ -65,6 +66,7 @@ class Tools:
         self.put_down_ids = []
         self.playing_status = PlayingStatus.NO
         self.playing_player = ""
+        self.not_supported_game = False
         self.selected_talon_alts = []
         self.leaved_talon_alts = []
         self.leaved_talon_ids = []
@@ -163,6 +165,13 @@ class Tools:
 
     def play_card(self, non_disabled_card_indexes, table):
         message = "Tools.play_card(): "
+        if self.not_supported_game:
+            Logs.info_message(message + "NOT SUPPORTED GAME. Returning random non disabled index")
+            random_index = random.sample(set(non_disabled_card_indexes), 1)[0]
+            card = self.cards[random_index]
+            Logs.info_message(message + "Played card is -> " + card.alt)
+            return card.alt
+
         suit = ""
         for player in config["player_positions"].split(","):
             if table[player] != "":
@@ -233,7 +242,7 @@ class Tools:
         message = "Tools.remove_from_deck(): "
         if alt in self.history_deck:
             self.history_deck.remove(alt)
-            Logs.debug_message(message + "Length of history_deck: " + str(len(self.history_deck)))
+            Logs.debug_message(message + "Length of history_deck: " + str(len(self.history_deck)) + "; Removing alt: " + str(alt))
         else:
             Logs.error_message(message + "Element '" + alt + "' does not exist in history_deck")
 
