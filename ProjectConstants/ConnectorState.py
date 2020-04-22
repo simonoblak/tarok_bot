@@ -6,3 +6,4 @@ class ConnectorState:
     GAME = "game"
     END_GAME = "end_game"
     OVER = "over"
+    SCORES = "scores"

@@ -3,7 +3,7 @@ from karte.Deck import Deck
 import mysql.connector
 import operator
 
-Configuration().read_config("../resources/configuration.txt")
+Configuration().read_config("../resources/documents/configuration.txt")
 config = Configuration().get_config()
 
 mydb = mysql.connector.connect(

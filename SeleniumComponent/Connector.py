@@ -39,7 +39,7 @@ class Connector:
     def __init__(self, url):
         self.url = url
         self.driver = self.init_driver()
-        self.wait = WebDriverWait(self.driver, 10)
+        self.wait = WebDriverWait(self.driver, 15)
         self.is_four_players = config["player_number"] == 4
         self.player_name = ""
         self.player_names = ()
@@ -248,20 +248,17 @@ class Connector:
                     break
 
         except NoSuchElementException:
-            Logs.error_message("No game was found in " + message)
-            # raise NoSuchElementException
-            Logs.warning_message("Stopping the bot")
-            self.admin.set_bot_state(AdminState.RESET)
+            self.handle_no_such_element_exception_exception(message)
 
     def choose_king(self):
-        choose_king_message = "Connector.choose_king(): "
-        Logs.debug_message(choose_king_message + "Choosing King")
+        message = "Connector.choose_king(): "
+        Logs.debug_message(message + "Choosing King")
         state_name = ConnectorState.CALL
         if self.check_if_reset():
             return
 
         if not self.check_state(state_name):
-            Logs.info_message(choose_king_message + "Ending because not in right state")
+            Logs.info_message(message + "Ending because not in right state")
             return
 
         if not self.is_game_selected_naprej:
@@ -269,12 +266,9 @@ class Connector:
                 if self.driver.find_element_by_id(ConnectorState.CALL).find_element_by_css_selector("h2").text.lower().startswith(self.player_names):
                     self.my_bot_playing = True
                     self.tool.set_bot_game()
-                    Logs.info_message(choose_king_message + "I'm playing game -> " + str(self.tool.game))
+                    Logs.info_message(message + "I'm playing game -> " + str(self.tool.game))
             except NoSuchElementException:
-                Logs.error_message("Error in: " + choose_king_message)
-                # raise NoSuchElementException
-                Logs.warning_message("Stopping the bot")
-                self.admin.set_bot_state(AdminState.RESET)
+                self.handle_no_such_element_exception_exception(message)
 
         if self.my_bot_playing and not self.choose_king_done:
             self.time_util(1, "Izbiramo kralja")
@@ -285,10 +279,7 @@ class Connector:
                 )
                 self.choose_king_done = True
             except NoSuchElementException:
-                Logs.error_message("Error in: " + choose_king_message)
-                # raise NoSuchElementException
-                Logs.warning_message("Stopping the bot")
-                self.admin.set_bot_state(AdminState.RESET)
+                self.handle_no_such_element_exception_exception(message)
         else:
             self.time_util(1, "Čakamo da drug igralec izbere kralja")
 
@@ -333,10 +324,7 @@ class Connector:
                     self.time_util(1, "Waiting for another card to put down...")
                 self.choose_talon_done = True
             except NoSuchElementException:
-                Logs.error_message("Error in: " + message)
-                # raise NoSuchElementException
-                Logs.warning_message("Stopping the bot")
-                self.admin.set_bot_state(AdminState.RESET)
+                self.handle_no_such_element_exception_exception(message)
         else:
             self.time_util(1, "Izbira talona od drugega igralca")
             self.tool.count_tarots_in_hand_and_color_points()
@@ -364,14 +352,14 @@ class Connector:
                     self.talon_subtracted = True
 
     def napoved(self):
-        napoved_message = "Connector.napoved(): "
-        Logs.debug_message(napoved_message + ": Napoved naprej")
+        message = "Connector.napoved(): "
+        Logs.debug_message(message + ": Napoved naprej")
         state_name = ConnectorState.BONUS
         if self.check_if_reset():
             return
 
         if not self.check_state(state_name):
-            Logs.info_message(napoved_message + ": Ending because not in right state")
+            Logs.info_message(message + ": Ending because not in right state")
             return
 
         if not self.tool.is_my_turn(self.get_timers(1)):
@@ -385,10 +373,7 @@ class Connector:
                 self.driver.find_element_by_id(ConnectorState.BONUS).find_element_by_css_selector("input[name='announce']")
             )
         except NoSuchElementException:
-            Logs.error_message("Error in: " + napoved_message)
-            # raise NoSuchElementException
-            Logs.warning_message("Stopping the bot")
-            self.admin.set_bot_state(AdminState.RESET)
+            self.handle_no_such_element_exception_exception(message)
 
     def the_game(self):
         message = "Connector.the_game(): "
@@ -405,7 +390,6 @@ class Connector:
 
         try:
             rounds_left = 12 if self.is_four_players else 16
-            reset_counter = 0
             previous_table = []
             while True:
                 if self.check_if_reset():
@@ -418,7 +402,7 @@ class Connector:
                     Logs.debug_message("############ TABLE ############")
                     Logs.debug_message(table)
                     Logs.debug_message("###############################")
-                    """
+                    # """
                     # Checking if lag or something caused that cards didn't disappear
                     is_previous_table_same = False
                     for stack in table:
@@ -430,7 +414,7 @@ class Connector:
                             break
                     if is_previous_table_same:
                         continue
-                    """
+                    # """
                     self.get_cards()
                     indexes = self.get_non_disabled_card_indexes()
                     play = self.tool.play_card(indexes, table)
@@ -467,16 +451,11 @@ class Connector:
                     # Reset the map
                     for p in player_positions:
                         player_positions[p] = ""
-                else:
-                    reset_counter += 1
-                    if reset_counter > 10:
-                        Logs.info_message(message + "exiting because it's probably over")
-                        self.state = ConnectorState.END_GAME
-                        return
+
                 if self.tool.not_supported_game:
                     scores_state = False
                     try:
-                        scores_state = self.driver.find_element_by_id(ConnectorState.BID).get_attribute("class") == "show"
+                        scores_state = self.driver.find_element_by_id(ConnectorState.SCORES).get_attribute("class") == "show"
                     except NoSuchElementException:
                         Logs.error_message("ERROR while checking state")
                         # raise NoSuchElementException
@@ -523,10 +502,7 @@ class Connector:
             self.commit_to_database()
 
         except NoSuchElementException:
-            Logs.error_message("Error in: " + message)
-            Logs.warning_message("Stopping the bot")
-            self.admin.set_bot_state(AdminState.RESET)
-            # raise NoSuchElementException
+            self.handle_no_such_element_exception_exception(message)
 
     def get_non_disabled_card_indexes(self):
         indexes = []
@@ -621,6 +597,7 @@ class Connector:
         message = "Connector.check_if_set_or_reset(): "
         if self.admin.bot_state == AdminState.RESET:
             Logs.info_message(message + "Bot will now wait for your command")
+            MusicPlayer.stop_sound()
             while True:
                 time.sleep(1)
                 if self.admin.bot_state == AdminState.SET:
@@ -781,6 +758,13 @@ class Connector:
                 self.tool.set_playing_suit(playing_suit)
             if len(player_names) == 1:
                 self.tool.set_ally("stack" + player_names[0][-1])
+
+    def handle_no_such_element_exception_exception(self, message):
+        Logs.error_message("Error in: " + message)
+        Logs.warning_message("Stopping the bot")
+        self.admin.set_bot_state(AdminState.RESET)
+        MusicPlayer.play_sound(config["not_supported_game"])
+        send_email("NoSuchElementException in " + message)
 
     def close_connection(self):
         self.driver.close()

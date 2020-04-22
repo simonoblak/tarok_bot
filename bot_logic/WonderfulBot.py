@@ -40,7 +40,11 @@ class WonderfulBot:
         :param cards:
         :return:
         """
+        message = "WonderfulBot.set_cards(): "
         self.cards = cards
+        for card in self.cards:
+            if card.is_tarot:
+                self.check_for_important_tarot(card.rank)
 
     def init_round(self):
         """
@@ -309,6 +313,7 @@ class WonderfulBot:
                 has_my_color_index = i
             if card.is_tarot:
                 self.tarot_count -= 1
+                self.check_for_important_tarot(card.rank)
             else:
                 self.suit_objects[card.suit].subtract_color()
                 # self.color_count[card.suit] -= 1
@@ -492,7 +497,7 @@ class WonderfulBot:
                         # Prevermo če so 3je suiti z 1 karto kjer sta druga in tretja karta po ranku enaka
                         if len(game_2_suits_with_1_card) > 2 and \
                                 game_2_suits_with_1_card[1].rank == game_2_suits_with_1_card[2].rank and \
-                                self.suit_objects[game_2_suits_with_1_card[1].suit] < self.suit_objects[game_2_suits_with_1_card[2].suit]:
+                                self.suit_objects[game_2_suits_with_1_card[1].suit].rank < self.suit_objects[game_2_suits_with_1_card[2].suit].rank:
 
                             return [game_2_suits_with_1_card[0], game_2_suits_with_1_card[2]]
 
@@ -616,8 +621,9 @@ class WonderfulBot:
             Logs.debug_message("Suit Objects")
             Logs.debug_message(self.suit_objects.keys())
             card_to_put_down = self.play_color(table, suit)
+            self.suit_objects[suit].was_already_played = True
             if card_to_put_down is not None:
-                self.suit_objects[suit].was_already_played = True
+                # self.suit_objects[suit].was_already_played = True
                 return card_to_put_down
             Logs.debug_message(message + "I probably don't have any colors of suit (" + suit + ") left, going to tarots...")
 
@@ -800,10 +806,10 @@ class WonderfulBot:
             #     RETURN king
             if sh.has_king and not sh.was_already_played and sh.color_count > 3 and not tarot_on_desk:
                 Logs.debug_message(message + "Choosing king " + suit + " because it was not played yet.")
-                return_card = self.get_card_from_alt(suit + CardRanks.KING)
+                return_card = self.get_card_from_alt(suit + CardRanks.KING, True)
                 if return_card is not None:
                     return return_card
-                Logs.warning_message(message + "King was maybe allready played?!?")
+                # Logs.warning_message(message + "King was maybe allready played?!?")
 
             # RETURN min rank
             Logs.debug_message(message + "Returning min rank")
@@ -1046,13 +1052,14 @@ class WonderfulBot:
             for talon_card in talon_cards:
                 if talon_card.is_tarot:
                     self.tarot_count -= 1
+                    self.check_for_important_tarot(talon_card.rank)
                 else:
                     self.suit_objects[talon_card.suit].subtract_color()
+
             return
         for stack in table:
-            if table[stack] in self.important_tarots:
-                Logs.debug_message(message + "Removing from important tarots -> " + str(table[stack]))
-                self.important_tarots.remove(table[stack])
+            Logs.debug_message(message + "stack(" + str(stack) + "); alt(" + str(table[stack]) + ")")
+            self.check_for_important_tarot(table[stack])
             if stack == "stack0":
                 continue
             if table[stack] != "":
@@ -1069,6 +1076,8 @@ class WonderfulBot:
                         self.players[stack].has_tarots = False
             else:
                 Logs.error_message(message + "table[stack] is empty?!?")
+        Logs.info_message(message + "Important tarots")
+        Logs.info_message(self.important_tarots)
 
     def set_player_statistics(self, stack, alt):
         self.players[stack].cards.append(alt)
@@ -1102,12 +1111,12 @@ class WonderfulBot:
                 return True
         return False
 
-    def get_card_from_alt(self, alt, mond=False):
+    def get_card_from_alt(self, alt, can_be_missing=False):
         message = "WonderfulBot.get_card_from_alt(): "
         for c in self.cards:
             if c.alt == alt:
                 return c
-        if not mond:
+        if not can_be_missing:
             Logs.error_message(message + "Something is wrong.")
         return None
 
@@ -1203,3 +1212,9 @@ class WonderfulBot:
                 (self.ally == "stack3" and table["stack1"] == "" and table["stack2"] == "" and table["stack3"] == ""):
             return True, AllyWin.ALLY
         return False, ""
+
+    def check_for_important_tarot(self, tarot_rank):
+        message = "WonderfulBot.check_for_important_tarot(): "
+        if tarot_rank in self.important_tarots:
+            Logs.info_message(message + "Removing from important tarots -> " + str(tarot_rank))
+            self.important_tarots.remove(tarot_rank)

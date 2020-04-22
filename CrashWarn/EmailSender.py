@@ -5,7 +5,7 @@ import base64
 
 
 def send_email(email_message=""):
-    sender_email, receiver_emails, base64_password = [line.rstrip('\n') for line in open("resources/email_config.txt", 'r', encoding='utf8')]
+    sender_email, receiver_emails, base64_password = [line.rstrip('\n') for line in open("resources/documents/email_config.txt", 'r', encoding='utf8')]
     port = 587  # For starttls
     smtp_server = "smtp.gmail.com"
     password = str(base64.b64decode(base64_password), "utf-8")

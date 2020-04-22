@@ -5,7 +5,7 @@ from karte import Card
 from Configuration import Configuration
 import operator
 
-Configuration().read_config("../resources/configuration.txt")
+Configuration().read_config("../resources/documents/configuration.txt")
 Configuration().check_config()
 config = Configuration().get_config()
 Deck.Deck.create_deck("../" + config["tarot_path"])

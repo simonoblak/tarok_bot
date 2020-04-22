@@ -4,7 +4,7 @@ import Configuration
 print("Start...")
 
 # Reading configuration.txt file
-Configuration.Configuration().read_config("resources/configuration.txt")
+Configuration.Configuration().read_config("resources/documents/configuration.txt")
 Configuration.Configuration().check_config()
 
 import TarokBot

@@ -148,9 +148,8 @@ class Tools:
         return alts_tab
 
     def convert_online_cards_into_bot_format(self, online_cards):
-        self.playing_bot.cards = self.cards = self.convert_alts_to_cards(online_cards)
-        # for c in self.cards:
-        #     Logs.debug_message("Tools.convert_online_cards_into_bot_format(): " + c.get_card_name())
+        self.cards = self.convert_alts_to_cards(online_cards)
+        self.playing_bot.set_cards(self.cards)
 
     def convert_alts_to_cards(self, online_cards):
         tab = []

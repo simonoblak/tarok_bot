@@ -1,5 +1,5 @@
-resources/user_config.txt
-resources/email_config.txt
+resources/documents/user_config.txt
+resources/documents/email_config.txt
 zapiski.txt
 .idea/inspectionProfiles/Project_Default.xml
 .idea/misc.xml
