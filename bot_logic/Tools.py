@@ -134,9 +134,12 @@ class Tools:
         return index
 
     def choose_talon_step_2(self, non_disabled_card_indexes):
+        message = "Tools.choose_talon_step_2(): "
         returned_cards = self.playing_bot.choose_talon_step_2(self.game, non_disabled_card_indexes)
         alts_tab = []
         indexes = []
+        Logs.debug_message(message + "Printing returned cards")
+        Logs.debug_message(returned_cards)
         for returned_card in returned_cards:
             alts_tab.append(returned_card.alt)
             self.put_down_ids.append(returned_card.deck_order)

@@ -473,14 +473,23 @@ class WonderfulBot:
                 else:
                     max_card_rank = 0
                     max_card = None
+                    max_played_card = None
                     for suit in one_card_suits:
                         suited_cards = self.get_cards_from_suit(suit)
                         for c in suited_cards:
-                            if c.rank > max_card_rank and not c.suit == self.playing_suite and not suit_counter[c.suit].has_king:
-                                max_card_rank = c.rank
-                                max_card = c
+                            if c.rank > max_card_rank and not suit_counter[c.suit].has_king:
+                                if not c.suit == self.playing_suite:
+                                    max_card_rank = c.rank
+                                    max_card = c
+                                else:
+                                    max_played_card = c
 
-                    return [max_card]
+                    if max_card is not None:
+                        return [max_card]
+
+                    if max_played_card is not None:
+                        return [max_played_card]
+
             if self.game == 2:
                 if len(one_card_suits) == 1:
                     if not suit_counter[one_card_suits[0]].has_king and not self.playing_suite == one_card_suits[0]:
@@ -493,13 +502,6 @@ class WonderfulBot:
 
                     if len(game_2_suits_with_1_card) > 1:
                         game_2_suits_with_1_card.sort(key=operator.attrgetter('rank'), reverse=True)
-
-                        # Prevermo če so 3je suiti z 1 karto kjer sta druga in tretja karta po ranku enaka
-                        if len(game_2_suits_with_1_card) > 2 and \
-                                game_2_suits_with_1_card[1].rank == game_2_suits_with_1_card[2].rank and \
-                                self.suit_objects[game_2_suits_with_1_card[1].suit].rank < self.suit_objects[game_2_suits_with_1_card[2].suit].rank:
-
-                            return [game_2_suits_with_1_card[0], game_2_suits_with_1_card[2]]
 
                         return game_2_suits_with_1_card[:2]
 
@@ -633,7 +635,7 @@ class WonderfulBot:
         """
         preveri če imam kralja katerga barva še ni bila igrana, če ga imam ga odigraj
 
-        Če igram igro in imam barvo v kateri igram odigraj najbolj vredno, če ne pa igram najmanj vredno
+        Če igram igro in imam barvo v kateri igram in soigralec še ni znan odigraj najbolj vredno, če ne pa igram najmanj vredno
 
         poišči če je kakšna barva že bila odigrana in odigraj najnižjo karto v tej barvi (ki ni dama)
 
@@ -659,9 +661,9 @@ class WonderfulBot:
                     self.suit_objects[so].was_already_played = True
                     return card_king
 
-        # Če igram igro in imam barvo v kateri igram odigraj najbolj vredno, če ne pa igram najmanj vredno
+        # Če igram igro in imam barvo v kateri igram in soigralec še ni znan odigraj najbolj vredno, če ne pa igram najmanj vredno
         cards_with_playing_suit = self.get_cards_from_suit(self.playing_suite)
-        if len(cards_with_playing_suit) > 0:
+        if len(cards_with_playing_suit) > 0 and self.ally == "":
             sh = self.suit_objects[self.playing_suite]
             if playing_status == PlayingStatus.PLAYING and not sh.was_already_played and sh.color_count > 3:
                 Logs.debug_message(message + "Returning highest card with playing suit ")
@@ -927,7 +929,7 @@ class WonderfulBot:
 
             # try to return XXI
             possible_mond = self.get_card_from_alt(CardRanks.MOND, True)
-            if possible_mond is not None and not skis_on_table:
+            if possible_mond is not None and not skis_on_table and CardRanks.SKIS_INT in self.important_tarots:
                 Logs.debug_message(message + "Returning XXI because I'm last.")
                 return possible_mond
 

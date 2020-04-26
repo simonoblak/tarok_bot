@@ -1,5 +1,6 @@
 import unittest
-from bot_logic import WonderfulBot
+from bot_logic.WonderfulBot import WonderfulBot
+from bot_logic.SimpleBot import SimpleBot
 from karte import Deck
 from karte import Card
 from Configuration import Configuration
@@ -16,7 +17,8 @@ class TestWonderfulBot(unittest.TestCase):
         self.deck = Deck.Deck.get_deck()
         # ♥, ♦, ♠, ♣
         self.cards = []  # self.get_cards_from_alts(["♠1", "♠4", "♣6", "♣8", "♦7", "♥5", "♥6", "5", "7", "18", "20", "22"])
-        self.bot = WonderfulBot.WonderfulBot([])
+        self.bot = WonderfulBot([])
+        # self.bot = SimpleBot([])
         self.bot.game = 0
         #self.bot.init_round()
         self.talon = []
@@ -154,6 +156,20 @@ class TestWonderfulBot(unittest.TestCase):
         self.assertEqual(self.bot.choose_talon_step_1(self.bot.game, self.talon), 1)
         # # TALON ZALAGANJE
         # self.assertEqual(self.talon_zalaganje(), ["♠4", "♠7"])
+
+    def test_case_9(self):
+        self.initialize_test(["♣3", "♣4", "♣8", "♥1", "♠1", "♠2", "♦8", "2", "6", "8", "12", "21"],
+                             ["♦3", "♠5", "♦5", "♠7", "11", "♠8"],
+                             ["11"])
+
+        # KING
+        suit = self.bot.choose_king()
+        self.assertEqual(suit, "♥")
+        # TALON IZBIRA
+        self.assertEqual(self.bot.choose_talon_step_1(self.bot.game, self.talon), 4)
+        # TALON ZALAGANJE
+        self.assertEqual(self.talon_zalaganje(), ["♥1"])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -110,6 +110,8 @@ class Connector:
         username_input.send_keys(user_config[0] + Keys.ENTER)
         self.driver.implicitly_wait(5)
 
+        self.time_util(1)
+
         if config["is_pass_encoded"] == "yes":
             pw = str(base64.b64decode(user_config[1]), "utf-8")
         else:
@@ -155,6 +157,8 @@ class Connector:
             # self.time_util(5)
             create_game = self.driver.find_element_by_css_selector("input[name='create']")
             self.click_execute(create_game)
+
+            self.time_util(1)
 
             bot_difficulty = self.driver.find_element_by_class_name("ai").find_elements_by_css_selector("span")
             for bot in bot_difficulty:
@@ -272,6 +276,7 @@ class Connector:
 
         if self.my_bot_playing and not self.choose_king_done:
             self.time_util(1, "Izbiramo kralja")
+            self.get_cards()
             suite = self.tool.choose_king()
             try:
                 self.click_execute(
@@ -321,7 +326,7 @@ class Connector:
                     self.click_execute(
                         self.driver.find_element_by_id("cards").find_element_by_css_selector("img[alt='" + card_alt + "']")
                     )
-                    self.time_util(1, "Waiting for another card to put down...")
+                    self.time_util(2, "Waiting for another card to put down...")
                 self.choose_talon_done = True
             except NoSuchElementException:
                 self.handle_no_such_element_exception_exception(message)
@@ -727,8 +732,8 @@ class Connector:
             if player_properties[0] in ('B', 'S', 'K'):
                 Logs.info_message(message + "Game is not supported. Will turn on random card selector.")
                 self.tool.not_supported_game = True
-                MusicPlayer.play_sound(config["not_supported_game"])
-                send_email("Unsupported game is in play!")
+                # MusicPlayer.play_sound(config["not_supported_game"])
+                # send_email("Unsupported game is in play!")
                 return
 
         if len(player_map) == 2:
@@ -737,9 +742,13 @@ class Connector:
             playing_game = 0
             playing_suit = ""
             for pm in player_map:
-                player_properties = [s.text for s in player_map[pm]]
-                Logs.debug_message(message + "Printing player_properties")
-                Logs.debug_message(player_properties)
+                try:
+                    player_properties = [s.text for s in player_map[pm]]
+                    Logs.debug_message(message + "Printing player_properties")
+                    Logs.debug_message(player_properties)
+                except StaleElementReferenceException:
+                    Logs.error_message(message + "StaleElementReferenceException: Message: stale element reference: element is not attached to the page document")
+                    return
 
                 for pp in player_properties:
                     if pp.isdigit():
